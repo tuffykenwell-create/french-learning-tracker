@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>French Learning Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 { font-size: 2em; margin-bottom: 5px; }
+        .header p { opacity: 0.9; font-size: 0.95em; }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 5px;
+        }
+        
+        .actions {
+            padding: 20px 25px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            background: white;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+            font-size: 0.95em;
+        }
+        
+        .btn:hover { transform: translateY(-2px); }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active { display: flex; }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h2 {
+            color: #667eea;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .close-btn:hover { color: #333; }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            font-family: inherit;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+        
+        .activities {
+            padding: 25px;
+        }
+        
+        .activities h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .activity-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+        
+        .activity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+        
+        .activity-main {
+            flex: 1;
+        }
+        
+        .activity-category {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        .activity-type {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.05em;
+        }
+        
+        .activity-date {
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+        
+        .activity-duration {
+            background: #28a745;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        .activity-description {
+            margin-top: 10px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .activity-notes {
+            margin-top: 8px;
+            color: #666;
+            font-style: italic;
+            font-size: 0.95em;
+        }
+        
+        .activity-actions {
+            margin-top: 10px;
+            text-align: right;
+        }
+        
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        
+        .delete-btn:hover {
+            background: #c82333;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .report-preview {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🇫🇷 French Learning Tracker</h1>
+            <p>Track your French learning activities and progress</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalActivities">0</div>
+                <div class="stat-label">Total Activities</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalMinutes">0</div>
+                <div class="stat-label">Total Minutes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="thisWeek">0</div>
+                <div class="stat-label">This Week</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgSession">0</div>
+                <div class="stat-label">Avg Session (min)</div>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button class="btn btn-primary" onclick="openAddModal()">➕ Add Activity</button>
+            <button class="btn btn-primary" onclick="openFocusModal()" style="background: #ff9800;">🎯 Set Activity Focus</button>
+            <button class="btn btn-success" onclick="generateWeeklyReport()">📊 Weekly Report</button>
+            <button class="btn btn-secondary" onclick="exportData()">💾 Export Data</button>
+            <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All</button>
+        </div>
+        
+        <div class="activities">
+            <h2>Activity Log</h2>
+            <div id="activitiesList"></div>
+        </div>
+    </div>
+
+    <!-- Add Activity Modal -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Activity</h2>
+                <button class="close-btn" onclick="closeAddModal()">×</button>
+            </div>
+            <div id="focusReminder" style="display: none; background: #fff3cd; border-left: 4px solid #ff9800; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                <div style="font-weight: bold; color: #856404; margin-bottom: 5px;">🎯 Current Focus:</div>
+                <div id="focusReminderText" style="color: #856404;"></div>
+            </div>
+            <form onsubmit="addActivity(event)">
+                <div class="form-group">
+                    <label for="category">Category *</label>
+                    <select id="category" required>
+                        <option value="">-- Select Category --</option>
+                        <option value="Reading">Reading</option>
+                        <option value="Writing">Writing</option>
+                        <option value="Listening">Listening</option>
+                        <option value="Speaking">Speaking</option>
+                        <option value="Grammar">Grammar</option>
+                        <option value="Vocabulary">Vocabulary</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="activityType">Activity Type *</label>
+                    <select id="activityType" required>
+                        <option value="">-- Select Activity Type --</option>
+                        <option value="AI Chat">AI Chat</option>
+                        <option value="Book Reading">Book Reading</option>
+                        <option value="Audiobook">Audiobook</option>
+                        <option value="Podcast">Podcast</option>
+                        <option value="Video/Movie">Video/Movie</option>
+                        <option value="Conversation Practice">Conversation Practice</option>
+                        <option value="Duolingo/App">Duolingo/App</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description *</label>
+                    <input type="text" id="description" placeholder="e.g., Chapter 3 of 'Le Petit Prince'" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="duration">Duration (minutes) *</label>
+                    <input type="number" id="duration" min="1" placeholder="15" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="productionOutput">Production Output</label>
+                    <textarea id="productionOutput" placeholder="What did I create/say in French today?"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">Notes (optional)</label>
+                    <textarea id="notes" placeholder="Any additional notes about this activity..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Activity</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Weekly Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Weekly Summary Report</h2>
+                <button class="close-btn" onclick="closeReportModal()">×</button>
+            </div>
+            <div class="report-preview" id="reportPreview"></div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeReportModal()">Close</button>
+                <button class="btn btn-primary" onclick="copyReport()">📋 Copy Report</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Focus Modal -->
+    <div id="focusModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🎯 Set Activity Focus</h2>
+                <button class="close-btn" onclick="closeFocusModal()">×</button>
+            </div>
+            <p style="color: #666; margin-bottom: 20px;">Set your current learning focus. This will remind you what to concentrate on each time you log an activity.</p>
+            <form onsubmit="saveFocus(event)">
+                <div class="form-group">
+                    <label for="activityFocus">Current Focus</label>
+                    <textarea id="activityFocus" placeholder="e.g., Focus on speaking practice this week, or Work on past tense conjugations" style="min-height: 100px;"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeFocusModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Focus</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let activities = [];
+        let editingIndex = null;
+        
+        function loadActivities() {
+            const stored = localStorage.getItem('frenchActivities');
+            activities = stored ? JSON.parse(stored) : [];
+            renderAll();
+        }
+        
+        function saveActivities() {
+            localStorage.setItem('frenchActivities', JSON.stringify(activities));
+        }
+        
+        function renderAll() {
+            renderStats();
+            renderActivities();
+        }
+        
+        function renderStats() {
+            const total = activities.length;
+            const totalMins = activities.reduce((sum, a) => sum + (a.duration || 0), 0);
+            
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            const weekActivities = activities.filter(a => new Date(a.date) > oneWeekAgo);
+            const weekCount = weekActivities.length;
+            
+            const avgSession = total > 0 ? Math.round(totalMins / total) : 0;
+            
+            document.getElementById('totalActivities').textContent = total;
+            document.getElementById('totalMinutes').textContent = totalMins;
+            document.getElementById('thisWeek').textContent = weekCount;
+            document.getElementById('avgSession').textContent = avgSession;
+        }
+        
+        function renderActivities() {
+            const list = document.getElementById('activitiesList');
+            
+            if (activities.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📚</div>
+                        <div>No activities logged yet.</div>
+                        <div style="margin-top: 10px; font-size: 0.9em;">Click "Add Activity" to start tracking!</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = activities.map((activity, index) => {
+                const date = new Date(activity.date);
+                const dateStr = date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                
+                return `
+                    <div class="activity-card">
+                        <div class="activity-header">
+                            <div class="activity-main">
+                                <div>
+                                    <span class="activity-category">${activity.category}</span>
+                                    <span class="activity-type">${activity.type}</span>
+                                </div>
+                                <div class="activity-date">${dateStr}</div>
+                            </div>
+                            <div class="activity-duration">${activity.duration} min</div>
+                        </div>
+                        <div class="activity-description">${activity.description}</div>
+                        ${activity.productionOutput ? `<div style="margin-top: 10px; padding: 10px; background: #e8f5e9; border-left: 3px solid #4caf50; border-radius: 4px;"><strong>Production Output:</strong> ${activity.productionOutput}</div>` : ''}
+                        ${activity.notes ? `<div class="activity-notes">${activity.notes}</div>` : ''}
+                        <div class="activity-actions">
+                            <button class="btn btn-secondary" style="padding: 5px 12px; font-size: 0.85em; margin-right: 8px;" onclick="editActivity(${index})">Edit</button>
+                            <button class="delete-btn" onclick="deleteActivity(${index})">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function openAddModal() {
+            editingIndex = null;
+            document.getElementById('addModal').classList.add('active');
+            document.querySelector('.modal-header h2').textContent = 'Add Activity';
+            updateFocusReminder();
+            document.getElementById('category').focus();
+        }
+        
+        function editActivity(index) {
+            editingIndex = index;
+            const activity = activities[index];
+            
+            document.getElementById('category').value = activity.category;
+            document.getElementById('activityType').value = activity.type;
+            document.getElementById('description').value = activity.description;
+            document.getElementById('duration').value = activity.duration;
+            document.getElementById('productionOutput').value = activity.productionOutput || '';
+            document.getElementById('notes').value = activity.notes || '';
+            
+            document.querySelector('.modal-header h2').textContent = 'Edit Activity';
+            updateFocusReminder();
+            document.getElementById('addModal').classList.add('active');
+        }
+        
+        function closeAddModal() {
+            editingIndex = null;
+            document.getElementById('addModal').classList.remove('active');
+            document.getElementById('category').value = '';
+            document.getElementById('activityType').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('duration').value = '';
+            document.getElementById('productionOutput').value = '';
+            document.getElementById('notes').value = '';
+        }
+        
+        function addActivity(event) {
+            event.preventDefault();
+            
+            const activity = {
+                id: editingIndex !== null ? activities[editingIndex].id : Date.now(),
+                date: editingIndex !== null ? activities[editingIndex].date : new Date().toISOString(),
+                category: document.getElementById('category').value,
+                type: document.getElementById('activityType').value,
+                description: document.getElementById('description').value,
+                duration: parseInt(document.getElementById('duration').value),
+                productionOutput: document.getElementById('productionOutput').value,
+                notes: document.getElementById('notes').value
+            };
+            
+            if (editingIndex !== null) {
+                // Editing existing activity
+                activities[editingIndex] = activity;
+                showSuccessMessage('✅ Activity updated successfully!');
+            } else {
+                // Adding new activity
+                activities.unshift(activity);
+                showSuccessMessage('✅ Activity logged successfully!');
+            }
+            
+            saveActivities();
+            renderAll();
+            closeAddModal();
+        }
+        
+        function deleteActivity(index) {
+            if (confirm('Delete this activity?')) {
+                activities.splice(index, 1);
+                saveActivities();
+                renderAll();
+            }
+        }
+        
+        function generateWeeklyReport() {
+            if (activities.length === 0) {
+                alert('No activities to report yet!');
+                return;
+            }
+            
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            const weekActivities = activities.filter(a => new Date(a.date) > oneWeekAgo);
+            
+            if (weekActivities.length === 0) {
+                alert('No activities in the last 7 days!');
+                return;
+            }
+            
+            const totalMins = weekActivities.reduce((sum, a) => sum + (a.duration || 0), 0);
+            const avgSession = Math.round(totalMins / weekActivities.length);
+            
+            // Category breakdown
+            const categoryBreakdown = {};
+            weekActivities.forEach(a => {
+                categoryBreakdown[a.category] = (categoryBreakdown[a.category] || 0) + a.duration;
+            });
+            
+            // Activity type breakdown
+            const typeBreakdown = {};
+            weekActivities.forEach(a => {
+                typeBreakdown[a.type] = (typeBreakdown[a.type] || 0) + 1;
+            });
+            
+            let report = `# French Learning Weekly Summary Report\n`;
+            report += `Generated: ${new Date().toLocaleDateString()}\n`;
+            report += `Period: Last 7 Days\n`;
+            
+            const currentFocus = loadActivityFocus();
+            if (currentFocus) {
+                report += `\n🎯 **Current Activity Focus:** ${currentFocus}\n`;
+            }
+            report += `\n## Overall Statistics\n`;
+            report += `- Total activities: ${weekActivities.length}\n`;
+            report += `- Total time: ${totalMins} minutes (${(totalMins/60).toFixed(1)} hours)\n`;
+            report += `- Average session: ${avgSession} minutes\n`;
+            report += `- Daily average: ${(weekActivities.length / 7).toFixed(1)} activities\n\n`;
+            
+            report += `## Time by Category\n`;
+            Object.entries(categoryBreakdown)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([category, mins]) => {
+                    const percent = ((mins / totalMins) * 100).toFixed(0);
+                    report += `- ${category}: ${mins} min (${percent}%)\n`;
+                });
+            
+            report += `\n## Activity Type Breakdown\n`;
+            Object.entries(typeBreakdown)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([type, count]) => {
+                    report += `- ${type}: ${count} sessions\n`;
+                });
+            
+            report += `\n## Detailed Activity Log\n`;
+            weekActivities.forEach(a => {
+                const date = new Date(a.date).toLocaleDateString();
+                report += `\n### ${date} - ${a.category}: ${a.type}\n`;
+                report += `- Duration: ${a.duration} minutes\n`;
+                report += `- Description: ${a.description}\n`;
+                if (a.productionOutput) report += `- Production Output: ${a.productionOutput}\n`;
+                if (a.notes) report += `- Notes: ${a.notes}\n`;
+            });
+            
+            report += `\n## Questions for AI Analysis\n`;
+            report += `Please analyze my French learning activities and provide insights on:\n`;
+            report += `1. Am I balancing the six skill categories (Reading, Writing, Listening, Speaking, Grammar, Vocabulary) effectively?\n`;
+            report += `2. Are my session durations optimal for learning and retention?\n`;
+            report += `3. What patterns or trends do you notice in my learning habits?\n`;
+            if (currentFocus) {
+                report += `4. Based on my stated focus ("${currentFocus}"), am I actually spending time on activities that align with this goal?\n`;
+                report += `5. Which areas should I focus more attention on based on my current distribution?\n`;
+                report += `6. Based on my Production Output entries, how is my active French usage progressing?\n`;
+                report += `7. Do you have any specific recommendations to improve my French learning routine?\n`;
+            } else {
+                report += `4. Which areas should I focus more attention on based on my current distribution?\n`;
+                report += `5. Based on my Production Output entries, how is my active French usage progressing?\n`;
+                report += `6. Do you have any specific recommendations to improve my French learning routine?\n`;
+            }
+            
+            document.getElementById('reportPreview').textContent = report;
+            document.getElementById('reportModal').classList.add('active');
+        }
+        
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.remove('active');
+        }
+        
+        function copyReport() {
+            const report = document.getElementById('reportPreview').textContent;
+            navigator.clipboard.writeText(report).then(() => {
+                showSuccessMessage('✅ Report copied! Paste it into Claude or any AI for analysis.');
+            }).catch(() => {
+                alert('Failed to copy. Please select and copy the text manually.');
+            });
+        }
+        
+        function exportData() {
+            const dataStr = JSON.stringify(activities, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `french-learning-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showSuccessMessage('✅ Data exported successfully!');
+        }
+        
+        function clearAllData() {
+            if (confirm('⚠️ Delete ALL activities? This cannot be undone!')) {
+                if (confirm('Are you absolutely sure?')) {
+                    localStorage.removeItem('frenchActivities');
+                    activities = [];
+                    renderAll();
+                    showSuccessMessage('✅ All data cleared.');
+                }
+            }
+        }
+        
+        function showSuccessMessage(message) {
+            const div = document.createElement('div');
+            div.textContent = message;
+            div.style.cssText = 'position:fixed;top:20px;right:20px;background:#28a745;color:white;padding:16px 24px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:10000;font-weight:600;';
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+        
+        // Activity Focus Functions
+        function loadActivityFocus() {
+            return localStorage.getItem('activityFocus') || '';
+        }
+        
+        function saveActivityFocus(focus) {
+            localStorage.setItem('activityFocus', focus);
+        }
+        
+        function updateFocusReminder() {
+            const focus = loadActivityFocus();
+            const reminderDiv = document.getElementById('focusReminder');
+            const reminderText = document.getElementById('focusReminderText');
+            
+            if (focus) {
+                reminderText.textContent = focus;
+                reminderDiv.style.display = 'block';
+            } else {
+                reminderDiv.style.display = 'none';
+            }
+        }
+        
+        function openFocusModal() {
+            const currentFocus = loadActivityFocus();
+            document.getElementById('activityFocus').value = currentFocus;
+            document.getElementById('focusModal').classList.add('active');
+            document.getElementById('activityFocus').focus();
+        }
+        
+        function closeFocusModal() {
+            document.getElementById('focusModal').classList.remove('active');
+            document.getElementById('activityFocus').value = '';
+        }
+        
+        function saveFocus(event) {
+            event.preventDefault();
+            const focus = document.getElementById('activityFocus').value.trim();
+            saveActivityFocus(focus);
+            closeFocusModal();
+            if (focus) {
+                showSuccessMessage('🎯 Activity focus updated!');
+            } else {
+                showSuccessMessage('🎯 Activity focus cleared!');
+            }
+        }
+        
+        // Close modals when clicking outside
+        document.getElementById('addModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAddModal();
+        });
+        
+        document.getElementById('reportModal').addEventListener('click', function(e) {
+            if (e.target === this) closeReportModal();
+        });
+        
+        document.getElementById('focusModal').addEventListener('click', function(e) {
+            if (e.target === this) closeFocusModal();
+        });
+        
+        // Initial load
+        loadActivities();
+    </script>
+</body>
+</html>

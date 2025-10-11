@@ -344,6 +344,22 @@
         <div class="activities">
             <h2>Activity Log</h2>
             <div id="activitiesList"></div>
+            
+            <div id="summarySection" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+                <h3 style="margin-bottom: 15px; color: #667eea;">Summary</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; border-left: 4px solid #2196f3;">
+                        <div style="font-size: 0.85em; color: #1976d2; text-transform: uppercase; margin-bottom: 5px;">Today</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: #1565c0;" id="todayMinutes">0</div>
+                        <div style="font-size: 0.85em; color: #1976d2;">minutes</div>
+                    </div>
+                    <div style="background: #f3e5f5; padding: 15px; border-radius: 8px; border-left: 4px solid #9c27b0;">
+                        <div style="font-size: 0.85em; color: #7b1fa2; text-transform: uppercase; margin-bottom: 5px;">Last 7 Days</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: #6a1b9a;" id="weekMinutes">0</div>
+                        <div style="font-size: 0.85em; color: #7b1fa2;">minutes</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -479,6 +495,17 @@
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
             const weekActivities = activities.filter(a => new Date(a.date) > oneWeekAgo);
             const weekCount = weekActivities.length;
+            const weekMins = weekActivities.reduce((sum, a) => sum + (a.duration || 0), 0);
+            
+            // Calculate today's minutes
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayActivities = activities.filter(a => {
+                const actDate = new Date(a.date);
+                actDate.setHours(0, 0, 0, 0);
+                return actDate.getTime() === today.getTime();
+            });
+            const todayMins = todayActivities.reduce((sum, a) => sum + (a.duration || 0), 0);
             
             const avgSession = total > 0 ? Math.round(totalMins / total) : 0;
             
@@ -486,6 +513,10 @@
             document.getElementById('totalMinutes').textContent = totalMins;
             document.getElementById('thisWeek').textContent = weekCount;
             document.getElementById('avgSession').textContent = avgSession;
+            
+            // Update summary section
+            document.getElementById('todayMinutes').textContent = todayMins;
+            document.getElementById('weekMinutes').textContent = weekMins;
         }
         
         function renderActivities() {

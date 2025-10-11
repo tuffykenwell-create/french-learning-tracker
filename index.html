@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -334,8 +335,11 @@
             <button class="btn btn-primary" onclick="openFocusModal()" style="background: #ff9800;">🎯 Set Activity Focus</button>
             <button class="btn btn-success" onclick="generateWeeklyReport()">📊 Weekly Report</button>
             <button class="btn btn-secondary" onclick="exportData()">💾 Export Data</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 Import Data</button>
             <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All</button>
         </div>
+        
+        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
         
         <div class="activities">
             <h2>Activity Log</h2>
@@ -711,6 +715,70 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             showSuccessMessage('✅ Data exported successfully!');
+        }
+        
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Validate that it's an array
+                    if (!Array.isArray(importedData)) {
+                        alert('❌ Invalid file format. Please select a valid JSON export file.');
+                        return;
+                    }
+                    
+                    // Ask user whether to merge or replace
+                    const currentCount = activities.length;
+                    const importCount = importedData.length;
+                    
+                    let message = `Found ${importCount} activities in the import file.\n\n`;
+                    if (currentCount > 0) {
+                        message += `You currently have ${currentCount} activities.\n\n`;
+                        message += `Choose:\n`;
+                        message += `• OK = MERGE (add imported activities to existing ones)\n`;
+                        message += `• Cancel = REPLACE (delete current activities and use imported ones)`;
+                    } else {
+                        message += `Import these activities?`;
+                    }
+                    
+                    const shouldMerge = confirm(message);
+                    
+                    if (currentCount > 0 && !shouldMerge) {
+                        // User chose Cancel = Replace
+                        if (confirm('⚠️ This will DELETE all current activities and replace with imported data. Are you sure?')) {
+                            activities = importedData;
+                            saveActivities();
+                            renderAll();
+                            showSuccessMessage(`✅ Replaced with ${importCount} imported activities!`);
+                        }
+                    } else {
+                        // User chose OK = Merge (or no existing data)
+                        // Remove duplicates based on ID
+                        const existingIds = new Set(activities.map(a => a.id));
+                        const newActivities = importedData.filter(a => !existingIds.has(a.id));
+                        
+                        activities = [...activities, ...newActivities];
+                        // Sort by date (newest first)
+                        activities.sort((a, b) => new Date(b.date) - new Date(a.date));
+                        
+                        saveActivities();
+                        renderAll();
+                        showSuccessMessage(`✅ Imported ${newActivities.length} new activities! (${importCount - newActivities.length} duplicates skipped)`);
+                    }
+                } catch (error) {
+                    alert('❌ Error reading file. Please make sure it\'s a valid JSON export file.');
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+            
+            // Reset file input so the same file can be imported again if needed
+            event.target.value = '';
         }
         
         function clearAllData() {

@@ -659,6 +659,7 @@
     </div>
     
     <!-- Firebase SDKs -->
+    <script src="https://apis.google.com/js/api.js"></script>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -683,6 +684,126 @@
         let activities = [];
         let unsubscribeActivities = null;
         let editingActivityId = null;
+        let calendarInitialized = false;
+        let calendarId = null;
+
+        // Initialize Google Calendar API
+        function initCalendarAPI() {
+            gapi.load('client:auth2', async () => {
+                try {
+                    await gapi.client.init({
+                        apiKey: firebaseConfig.apiKey,
+                        clientId: '1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com',
+                        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
+                        scope: 'https://www.googleapis.com/auth/calendar.events'
+                    });
+                    calendarInitialized = true;
+                    await findOrCreateCalendar();
+                } catch (error) {
+                    console.error('Error initializing Calendar API:', error);
+                }
+            });
+        }
+
+        // Find or create the French Learning calendar
+        async function findOrCreateCalendar() {
+            if (!calendarInitialized) return;
+
+            try {
+                const response = await gapi.client.calendar.calendarList.list();
+                const calendars = response.result.items || [];
+                
+                // Look for existing French Learning calendar
+                const frenchCal = calendars.find(cal => cal.summary === 'French Learning');
+                
+                if (frenchCal) {
+                    calendarId = frenchCal.id;
+                    console.log('Found French Learning calendar:', calendarId);
+                } else {
+                    // Create new calendar
+                    const newCal = await gapi.client.calendar.calendars.insert({
+                        resource: {
+                            summary: 'French Learning',
+                            description: 'Automatic tracking of French learning activities',
+                            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                        }
+                    });
+                    calendarId = newCal.result.id;
+                    console.log('Created French Learning calendar:', calendarId);
+                }
+            } catch (error) {
+                console.error('Error finding/creating calendar:', error);
+            }
+        }
+
+        // Update calendar event for a specific date
+        async function updateCalendarForDate(dateString) {
+            if (!calendarInitialized || !calendarId) return;
+
+            try {
+                // Get all activities for this date
+                const date = new Date(dateString);
+                const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+                const dayActivities = activities.filter(a => {
+                    const actDate = new Date(a.date);
+                    return actDate >= dayStart && actDate < dayEnd;
+                });
+
+                const totalMinutes = dayActivities.reduce((sum, a) => sum + (a.duration || 0), 0);
+
+                // Format date for calendar (YYYY-MM-DD)
+                const dateStr = dayStart.toISOString().split('T')[0];
+
+                // Check if event already exists for this date
+                const events = await gapi.client.calendar.events.list({
+                    calendarId: calendarId,
+                    timeMin: dayStart.toISOString(),
+                    timeMax: dayEnd.toISOString(),
+                    q: '🇫🇷 French:',
+                    singleEvents: true
+                });
+
+                const existingEvent = events.result.items?.[0];
+
+                if (totalMinutes === 0) {
+                    // Delete event if no activities for this day
+                    if (existingEvent) {
+                        await gapi.client.calendar.events.delete({
+                            calendarId: calendarId,
+                            eventId: existingEvent.id
+                        });
+                        console.log('Deleted calendar event for', dateStr);
+                    }
+                } else {
+                    // Create or update event
+                    const eventData = {
+                        summary: `🇫🇷 French: ${totalMinutes} min`,
+                        start: { date: dateStr },
+                        end: { date: dateStr },
+                        description: `Logged ${dayActivities.length} activities totaling ${totalMinutes} minutes`
+                    };
+
+                    if (existingEvent) {
+                        await gapi.client.calendar.events.update({
+                            calendarId: calendarId,
+                            eventId: existingEvent.id,
+                            resource: eventData
+                        });
+                        console.log('Updated calendar event for', dateStr);
+                    } else {
+                        await gapi.client.calendar.events.insert({
+                            calendarId: calendarId,
+                            resource: eventData
+                        });
+                        console.log('Created calendar event for', dateStr);
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating calendar:', error);
+            }
+        }
 
         // Make functions globally available
         window.signInWithGoogle = async function() {
@@ -718,6 +839,9 @@
                     </div>
                     ${user.photoURL ? `<img src="${user.photoURL}" alt="Profile" class="user-avatar">` : ''}
                 `;
+                
+                // Initialize Calendar API
+                initCalendarAPI();
                 
                 // Load activities
                 loadActivities();
@@ -876,11 +1000,18 @@
 
             try {
                 if (editingActivityId) {
+                    const oldActivity = activities.find(a => a.id === editingActivityId);
                     await updateDoc(doc(db, 'activities', editingActivityId), activityData);
                     showSuccessMessage('✅ Activity updated!');
+                    // Update calendar for both old and new dates if they differ
+                    if (oldActivity) {
+                        await updateCalendarForDate(oldActivity.date);
+                    }
+                    await updateCalendarForDate(activityData.date);
                 } else {
                     await addDoc(collection(db, 'activities'), activityData);
                     showSuccessMessage('✅ Activity logged!');
+                    await updateCalendarForDate(activityData.date);
                 }
                 closeAddModal();
             } catch (error) {
@@ -892,8 +1023,12 @@
         window.deleteActivity = async function(id) {
             if (confirm('Delete this activity?')) {
                 try {
+                    const activity = activities.find(a => a.id === id);
                     await deleteDoc(doc(db, 'activities', id));
                     showSuccessMessage('✅ Activity deleted!');
+                    if (activity) {
+                        await updateCalendarForDate(activity.date);
+                    }
                 } catch (error) {
                     console.error('Error deleting activity:', error);
                     alert('Failed to delete activity. Please try again.');

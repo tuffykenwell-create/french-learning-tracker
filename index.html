@@ -722,7 +722,7 @@
         });
 
         function loadActivities() {
-            const activitiesRef = collection(db, `users/${currentUser.uid}/activities`);
+            const activitiesRef = collection(db, 'activities');
             const q = query(activitiesRef, orderBy('date', 'desc'));
             
             unsubscribeActivities = onSnapshot(q, (snapshot) => {
@@ -736,7 +736,7 @@
 
         async function loadFocus() {
             try {
-                const focusRef = doc(db, `users/${currentUser.uid}/settings/focus`);
+                const focusRef = doc(db, 'settings', 'focus');
                 const focusDoc = await getDoc(focusRef);
                 
                 if (focusDoc.exists()) {
@@ -844,10 +844,10 @@
 
             try {
                 if (editingActivityId) {
-                    await updateDoc(doc(db, `users/${currentUser.uid}/activities`, editingActivityId), activityData);
+                    await updateDoc(doc(db, 'activities', editingActivityId), activityData);
                     showSuccessMessage('✅ Activity updated!');
                 } else {
-                    await addDoc(collection(db, `users/${currentUser.uid}/activities`), activityData);
+                    await addDoc(collection(db, 'activities'), activityData);
                     showSuccessMessage('✅ Activity logged!');
                 }
                 closeAddModal();
@@ -860,7 +860,7 @@
         window.deleteActivity = async function(id) {
             if (confirm('Delete this activity?')) {
                 try {
-                    await deleteDoc(doc(db, `users/${currentUser.uid}/activities`, id));
+                    await deleteDoc(doc(db, 'activities', id));
                     showSuccessMessage('✅ Activity deleted!');
                 } catch (error) {
                     console.error('Error deleting activity:', error);
@@ -1031,7 +1031,7 @@
         }
 
         window.openFocusModal = function() {
-            getDoc(doc(db, `users/${currentUser.uid}/settings/focus`)).then((docSnap) => {
+            getDoc(doc(db, 'settings', 'focus')).then((docSnap) => {
                 if (docSnap.exists()) {
                     document.getElementById('activityFocus').value = docSnap.data().text || '';
                 } else {
@@ -1050,7 +1050,7 @@
             const focus = document.getElementById('activityFocus').value.trim();
             
             try {
-                await setDoc(doc(db, `users/${currentUser.uid}/settings/focus`), {
+                await setDoc(doc(db, 'settings', 'focus'), {
                     text: focus,
                     updatedAt: new Date().toISOString()
                 });
@@ -1115,7 +1115,7 @@
                     for (const activity of data.activities) {
                         // Remove the id field to let Firestore generate new ones
                         const { id, ...activityData } = activity;
-                        await addDoc(collection(db, `users/${currentUser.uid}/activities`), activityData);
+                        await addDoc(collection(db, 'activities'), activityData);
                         imported++;
                     }
                     

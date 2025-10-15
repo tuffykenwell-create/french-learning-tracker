@@ -451,12 +451,8 @@
                 <button class="btn btn-primary" onclick="openFocusModal()" style="background: #ff9800;">🎯 Set Activity Focus</button>
                 <button class="btn btn-success" onclick="generateWeeklyReport()">📊 Weekly Report</button>
                 <button class="btn btn-secondary" onclick="exportData()">💾 Export Data</button>
-                <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 Import Data</button>
-                <button id="calendarBtn" class="btn" style="background: #4285f4; color: white;" onclick="handleCalendarConnection()">📅 Connect Calendar</button>
                 <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All</button>
             </div>
-            
-            <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
             
             <div class="activities">
                 <h2>Activity Log</h2>
@@ -613,6 +609,10 @@
         window.currentUser = null;
         window.activities = [];
         window.editingId = null;
+        window.db = db;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
 
         // Authentication functions
         window.signInWithGoogle = async function() {
@@ -875,8 +875,6 @@
                 notes: document.getElementById('notes').value
             };
             
-            const dateString = new Date(activity.date).toISOString().split('T')[0];
-            
             try {
                 if (editingId) {
                     await updateActivity(editingId, activity);
@@ -887,10 +885,6 @@
                 }
                 
                 await loadActivities();
-                
-                // Sync to calendar
-                await syncDayToCalendar(dateString);
-                
                 closeAddModal();
             } catch (error) {
                 alert('Error saving activity. Please try again.');
@@ -900,14 +894,8 @@
         async function deleteActivityClick(activityId) {
             if (confirm('Delete this activity?')) {
                 try {
-                    const activity = activities.find(a => a.id === activityId);
-                    const dateString = new Date(activity.date).toISOString().split('T')[0];
-                    
                     await deleteActivity(activityId);
                     await loadActivities();
-                    
-                    // Sync to calendar (will delete event if no more activities that day)
-                    await syncDayToCalendar(dateString);
                 } catch (error) {
                     alert('Error deleting activity. Please try again.');
                 }
@@ -1030,70 +1018,6 @@
             showSuccessMessage('✅ Data exported successfully!');
         }
         
-        async function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    
-                    // Validate that it's an array
-                    if (!Array.isArray(importedData)) {
-                        alert('❌ Invalid file format. Please select a valid JSON export file.');
-                        return;
-                    }
-                    
-                    const importCount = importedData.length;
-                    
-                    if (!confirm(`Found ${importCount} activities in the import file.\n\nThis will add them to your cloud database. Continue?`)) {
-                        return;
-                    }
-                    
-                    // Show progress
-                    const progressDiv = document.createElement('div');
-                    progressDiv.textContent = 'Importing... 0%';
-                    progressDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;color:#667eea;padding:30px 50px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:10001;font-weight:600;font-size:1.2em;';
-                    document.body.appendChild(progressDiv);
-                    
-                    let imported = 0;
-                    
-                    // Import each activity to Firestore
-                    for (let i = 0; i < importedData.length; i++) {
-                        const activity = importedData[i];
-                        // Remove old id field if it exists
-                        delete activity.id;
-                        
-                        try {
-                            await saveActivity(activity);
-                            imported++;
-                            progressDiv.textContent = `Importing... ${Math.round((imported / importCount) * 100)}%`;
-                        } catch (error) {
-                            console.error('Error importing activity:', error);
-                        }
-                    }
-                    
-                    document.body.removeChild(progressDiv);
-                    await loadActivities();
-                    showSuccessMessage(`✅ Successfully imported ${imported} activities!`);
-                    
-                    // Sync to calendar if connected
-                    if (calendarConnected) {
-                        await syncAllActivitiesToCalendar();
-                    }
-                    
-                } catch (error) {
-                    alert('❌ Error reading file. Please make sure it\'s a valid JSON export file.');
-                    console.error(error);
-                }
-            };
-            reader.readAsText(file);
-            
-            // Reset file input
-            event.target.value = '';
-        }
-        
         async function clearAllData() {
             if (confirm('⚠️ Delete ALL activities? This cannot be undone!')) {
                 if (confirm('Are you absolutely sure?')) {
@@ -1171,287 +1095,6 @@
         
         document.getElementById('focusModal').addEventListener('click', function(e) {
             if (e.target === this) closeFocusModal();
-        });
-    </script>
-    
-    <!-- Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script>
-        // Google Calendar API configuration
-        const CALENDAR_CLIENT_ID = '1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com';
-        const CALENDAR_SCOPES = 'https://www.googleapis.com/auth/calendar.events';
-        
-        let tokenClient;
-        let calendarConnected = false;
-        let accessToken = null;
-        let selectedCalendarId = 'primary';
-        
-        // Initialize Google Identity Services
-        function initGoogleIdentity() {
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CALENDAR_CLIENT_ID,
-                scope: CALENDAR_SCOPES,
-                callback: async (response) => {
-                    if (response.error !== undefined) {
-                        console.error('Error getting token:', response);
-                        return;
-                    }
-                    
-                    accessToken = response.access_token;
-                    calendarConnected = true;
-                    updateCalendarButton(true);
-                    
-                    // Save connection state
-                    if (window.currentUser) {
-                        const docRef = doc(db, 'userSettings', window.currentUser.uid);
-                        await setDoc(docRef, { calendarConnected: true }, { merge: true });
-                    }
-                    
-                    showSuccessMessage('✅ Calendar connected! Daily totals will now sync automatically.');
-                    
-                    // Sync all existing activities
-                    await syncAllActivitiesToCalendar();
-                },
-            });
-        }
-        
-        async function loadCalendarConnection() {
-            if (!window.currentUser) return;
-            
-            try {
-                const docRef = doc(db, 'userSettings', window.currentUser.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists() && docSnap.data().calendarConnected && accessToken) {
-                    calendarConnected = true;
-                    updateCalendarButton(true);
-                }
-            } catch (error) {
-                console.error('Error loading calendar connection:', error);
-            }
-        }
-        
-        function updateCalendarButton(connected) {
-            const btn = document.getElementById('calendarBtn');
-            if (connected) {
-                btn.textContent = '📅 Calendar Connected ✓';
-                btn.style.background = '#28a745';
-                btn.onclick = disconnectCalendar;
-            } else {
-                btn.textContent = '📅 Connect Calendar';
-                btn.style.background = '#4285f4';
-                btn.onclick = handleCalendarConnection;
-            }
-        }
-        
-        async function handleCalendarConnection() {
-            if (!tokenClient) {
-                alert('Calendar service is still loading. Please try again in a moment.');
-                return;
-            }
-            tokenClient.requestAccessToken({prompt: 'consent'});
-        }
-        
-        async function disconnectCalendar() {
-            if (confirm('Disconnect calendar? Your calendar events will remain, but new activities won\'t be synced.')) {
-                if (accessToken) {
-                    // Revoke token
-                    await fetch('https://oauth2.googleapis.com/revoke?token=' + accessToken, {
-                        method: 'POST',
-                        headers: {
-                            'Content-type': 'application/x-www-form-urlencoded'
-                        }
-                    });
-                    accessToken = null;
-                }
-                
-                calendarConnected = false;
-                updateCalendarButton(false);
-                
-                if (window.currentUser) {
-                    const docRef = doc(db, 'userSettings', window.currentUser.uid);
-                    await setDoc(docRef, { calendarConnected: false }, { merge: true });
-                }
-                
-                showSuccessMessage('📅 Calendar disconnected.');
-            }
-        }
-        
-        async function syncAllActivitiesToCalendar() {
-            if (!calendarConnected || !accessToken || activities.length === 0) return;
-            
-            const progressDiv = document.createElement('div');
-            progressDiv.textContent = 'Syncing to calendar...';
-            progressDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;color:#667eea;padding:30px 50px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:10001;font-weight:600;font-size:1.2em;';
-            document.body.appendChild(progressDiv);
-            
-            // Group activities by date
-            const dailyTotals = {};
-            activities.forEach(activity => {
-                const date = new Date(activity.date);
-                const dateKey = date.toISOString().split('T')[0];
-                dailyTotals[dateKey] = (dailyTotals[dateKey] || 0) + (activity.duration || 0);
-            });
-            
-            // Create/update calendar events for each day
-            for (const [date, minutes] of Object.entries(dailyTotals)) {
-                await updateCalendarEvent(date, minutes);
-            }
-            
-            document.body.removeChild(progressDiv);
-            showSuccessMessage('✅ All activities synced to calendar!');
-        }
-        
-        async function updateCalendarEvent(dateString, minutes) {
-            if (!calendarConnected || !accessToken) return;
-            
-            try {
-                const eventTitle = `🇫🇷 French Learning: ${minutes} minutes`;
-                const eventDescription = `Total French learning time for this day. View details in your French Learning Tracker.`;
-                
-                // Check if event already exists for this date
-                const timeMin = new Date(dateString + 'T00:00:00').toISOString();
-                const timeMax = new Date(dateString + 'T23:59:59').toISOString();
-                
-                const listResponse = await fetch(
-                    `https://www.googleapis.com/calendar/v3/calendars/${selectedCalendarId}/events?` + 
-                    `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&` +
-                    `q=${encodeURIComponent('🇫🇷 French Learning')}&singleEvents=true`,
-                    {
-                        headers: {
-                            'Authorization': 'Bearer ' + accessToken
-                        }
-                    }
-                );
-                
-                if (!listResponse.ok) {
-                    throw new Error('Failed to list events');
-                }
-                
-                const listData = await listResponse.json();
-                const existingEvent = listData.items?.find(event => 
-                    event.summary && event.summary.startsWith('🇫🇷 French Learning')
-                );
-                
-                const event = {
-                    summary: eventTitle,
-                    description: eventDescription,
-                    start: {
-                        date: dateString,
-                    },
-                    end: {
-                        date: dateString,
-                    },
-                    colorId: '10', // Green color
-                };
-                
-                if (existingEvent) {
-                    // Update existing event
-                    const updateResponse = await fetch(
-                        `https://www.googleapis.com/calendar/v3/calendars/${selectedCalendarId}/events/${existingEvent.id}`,
-                        {
-                            method: 'PUT',
-                            headers: {
-                                'Authorization': 'Bearer ' + accessToken,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(event)
-                        }
-                    );
-                    
-                    if (!updateResponse.ok) {
-                        throw new Error('Failed to update event');
-                    }
-                } else {
-                    // Create new event
-                    const createResponse = await fetch(
-                        `https://www.googleapis.com/calendar/v3/calendars/${selectedCalendarId}/events`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': 'Bearer ' + accessToken,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(event)
-                        }
-                    );
-                    
-                    if (!createResponse.ok) {
-                        throw new Error('Failed to create event');
-                    }
-                }
-            } catch (error) {
-                console.error('Error updating calendar event:', error);
-            }
-        }
-        
-        async function deleteCalendarEvent(dateString) {
-            if (!calendarConnected || !accessToken) return;
-            
-            try {
-                const timeMin = new Date(dateString + 'T00:00:00').toISOString();
-                const timeMax = new Date(dateString + 'T23:59:59').toISOString();
-                
-                const listResponse = await fetch(
-                    `https://www.googleapis.com/calendar/v3/calendars/${selectedCalendarId}/events?` + 
-                    `timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&` +
-                    `q=${encodeURIComponent('🇫🇷 French Learning')}&singleEvents=true`,
-                    {
-                        headers: {
-                            'Authorization': 'Bearer ' + accessToken
-                        }
-                    }
-                );
-                
-                if (!listResponse.ok) return;
-                
-                const listData = await listResponse.json();
-                const existingEvent = listData.items?.find(event => 
-                    event.summary && event.summary.startsWith('🇫🇷 French Learning')
-                );
-                
-                if (existingEvent) {
-                    await fetch(
-                        `https://www.googleapis.com/calendar/v3/calendars/${selectedCalendarId}/events/${existingEvent.id}`,
-                        {
-                            method: 'DELETE',
-                            headers: {
-                                'Authorization': 'Bearer ' + accessToken
-                            }
-                        }
-                    );
-                }
-            } catch (error) {
-                console.error('Error deleting calendar event:', error);
-            }
-        }
-        
-        async function syncDayToCalendar(dateString) {
-            if (!calendarConnected) return;
-            
-            // Calculate total minutes for this day
-            const dayActivities = activities.filter(a => {
-                const actDate = new Date(a.date).toISOString().split('T')[0];
-                return actDate === dateString;
-            });
-            
-            const totalMinutes = dayActivities.reduce((sum, a) => sum + (a.duration || 0), 0);
-            
-            if (totalMinutes > 0) {
-                await updateCalendarEvent(dateString, totalMinutes);
-            } else {
-                await deleteCalendarEvent(dateString);
-            }
-        }
-        
-        // Initialize when page loads
-        window.addEventListener('load', () => {
-            // Wait for Google Identity Services to load
-            const checkGoogleLoaded = setInterval(() => {
-                if (typeof google !== 'undefined' && google.accounts) {
-                    clearInterval(checkGoogleLoaded);
-                    initGoogleIdentity();
-                }
-            }, 100);
         });
     </script>
 </body>

@@ -259,7 +259,7 @@
         <div id="authSection" class="auth-section">
             <p>Sign in with Google to sync your learning progress across devices and add events to your calendar!</p>
             <div id="g_id_onload"
-                 data-client_id="YOUR_CLIENT_ID"
+                 data-client_id="268021913318-6lmja99nj8t3i60q2h6c6ffph6a1v09i.apps.googleusercontent.com"
                  data-callback="handleCredentialResponse"
                  data-auto_prompt="false">
             </div>
@@ -417,10 +417,9 @@
         function initializeCalendarAPI() {
             gapi.load('client', async () => {
                 try {
-                    await gapi.client.init({
-                        apiKey: API_KEY,
-                        discoveryDocs: [DISCOVERY_DOC],
-                    });
+                    // Load the Calendar API client WITHOUT using gapi.client.init (which is deprecated)
+                    await gapi.client.load(DISCOVERY_DOC);
+                    gapi.client.setApiKey(API_KEY);
 
                     // Initialize the token client for OAuth
                     tokenClient = google.accounts.oauth2.initTokenClient({
@@ -433,18 +432,20 @@
                             }
                             accessToken = response.access_token;
                             gapi.client.setToken({access_token: accessToken});
+                            console.log('Access token received, finding/creating calendar...');
                             await findOrCreateCalendar();
                         },
                     });
 
                     // Request access token
+                    console.log('Requesting Calendar API access...');
                     if (accessToken === null) {
                         tokenClient.requestAccessToken({prompt: 'consent'});
                     } else {
                         tokenClient.requestAccessToken({prompt: ''});
                     }
 
-                    console.log('Calendar API initialized');
+                    console.log('Calendar API client loaded successfully');
                 } catch (error) {
                     console.error('Error initializing Calendar API:', error);
                 }

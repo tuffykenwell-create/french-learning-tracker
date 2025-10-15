@@ -417,9 +417,10 @@
         function initializeCalendarAPI() {
             gapi.load('client', async () => {
                 try {
-                    // Load the Calendar API client WITHOUT using gapi.client.init (which is deprecated)
-                    await gapi.client.load(DISCOVERY_DOC);
-                    gapi.client.setApiKey(API_KEY);
+                    await gapi.client.init({
+                        apiKey: API_KEY,
+                        discoveryDocs: [DISCOVERY_DOC],
+                    });
 
                     // Initialize the token client for OAuth
                     tokenClient = google.accounts.oauth2.initTokenClient({
@@ -432,20 +433,18 @@
                             }
                             accessToken = response.access_token;
                             gapi.client.setToken({access_token: accessToken});
-                            console.log('Access token received, finding/creating calendar...');
                             await findOrCreateCalendar();
                         },
                     });
 
                     // Request access token
-                    console.log('Requesting Calendar API access...');
                     if (accessToken === null) {
                         tokenClient.requestAccessToken({prompt: 'consent'});
                     } else {
                         tokenClient.requestAccessToken({prompt: ''});
                     }
 
-                    console.log('Calendar API client loaded successfully');
+                    console.log('Calendar API initialized');
                 } catch (error) {
                     console.error('Error initializing Calendar API:', error);
                 }

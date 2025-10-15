@@ -452,6 +452,7 @@
                 <button class="btn btn-success" onclick="generateWeeklyReport()">📊 Weekly Report</button>
                 <button class="btn btn-secondary" onclick="exportData()">💾 Export Data</button>
                 <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 Import Data</button>
+                <button id="calendarBtn" class="btn" style="background: #4285f4; color: white;" onclick="handleCalendarConnection()">📅 Connect Calendar</button>
                 <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All</button>
             </div>
             
@@ -874,6 +875,8 @@
                 notes: document.getElementById('notes').value
             };
             
+            const dateString = new Date(activity.date).toISOString().split('T')[0];
+            
             try {
                 if (editingId) {
                     await updateActivity(editingId, activity);
@@ -884,6 +887,10 @@
                 }
                 
                 await loadActivities();
+                
+                // Sync to calendar
+                await syncDayToCalendar(dateString);
+                
                 closeAddModal();
             } catch (error) {
                 alert('Error saving activity. Please try again.');
@@ -893,8 +900,14 @@
         async function deleteActivityClick(activityId) {
             if (confirm('Delete this activity?')) {
                 try {
+                    const activity = activities.find(a => a.id === activityId);
+                    const dateString = new Date(activity.date).toISOString().split('T')[0];
+                    
                     await deleteActivity(activityId);
                     await loadActivities();
+                    
+                    // Sync to calendar (will delete event if no more activities that day)
+                    await syncDayToCalendar(dateString);
                 } catch (error) {
                     alert('Error deleting activity. Please try again.');
                 }
@@ -1065,6 +1078,11 @@
                     await loadActivities();
                     showSuccessMessage(`✅ Successfully imported ${imported} activities!`);
                     
+                    // Sync to calendar if connected
+                    if (calendarConnected) {
+                        await syncAllActivitiesToCalendar();
+                    }
+                    
                 } catch (error) {
                     alert('❌ Error reading file. Please make sure it\'s a valid JSON export file.');
                     console.error(error);
@@ -1153,6 +1171,269 @@
         
         document.getElementById('focusModal').addEventListener('click', function(e) {
             if (e.target === this) closeFocusModal();
+        });
+    </script>
+    
+    <!-- Google API Client Library -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script>
+        // Google Calendar API configuration
+        const CALENDAR_CLIENT_ID = '1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com';
+        const CALENDAR_API_KEY = 'AIzaSyAoN9yI6dLRymNhZWhdAr_QX1Xz3fU9N1c';
+        const CALENDAR_DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
+        const CALENDAR_SCOPES = 'https://www.googleapis.com/auth/calendar.events';
+        
+        let gapiInited = false;
+        let gisInited = false;
+        let tokenClient;
+        let calendarConnected = false;
+        let selectedCalendarId = 'primary';
+        
+        // Load Google API
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
+        }
+        
+        async function initializeGapiClient() {
+            await gapi.client.init({
+                apiKey: CALENDAR_API_KEY,
+                discoveryDocs: [CALENDAR_DISCOVERY_DOC],
+            });
+            gapiInited = true;
+            maybeEnableButtons();
+        }
+        
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CALENDAR_CLIENT_ID,
+                scope: CALENDAR_SCOPES,
+                callback: '', // defined later
+            });
+            gisInited = true;
+            maybeEnableButtons();
+        }
+        
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited && window.currentUser) {
+                loadCalendarConnection();
+            }
+        }
+        
+        async function loadCalendarConnection() {
+            if (!window.currentUser) return;
+            
+            try {
+                const docRef = doc(db, 'userSettings', window.currentUser.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists() && docSnap.data().calendarConnected) {
+                    // Check if we still have a valid token
+                    const token = gapi.client.getToken();
+                    if (token) {
+                        calendarConnected = true;
+                        updateCalendarButton(true);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading calendar connection:', error);
+            }
+        }
+        
+        function updateCalendarButton(connected) {
+            const btn = document.getElementById('calendarBtn');
+            if (connected) {
+                btn.textContent = '📅 Calendar Connected ✓';
+                btn.style.background = '#28a745';
+                btn.onclick = disconnectCalendar;
+            } else {
+                btn.textContent = '📅 Connect Calendar';
+                btn.style.background = '#4285f4';
+                btn.onclick = handleCalendarConnection;
+            }
+        }
+        
+        async function handleCalendarConnection() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    throw (resp);
+                }
+                
+                calendarConnected = true;
+                updateCalendarButton(true);
+                
+                // Save connection state
+                if (window.currentUser) {
+                    const docRef = doc(db, 'userSettings', window.currentUser.uid);
+                    await setDoc(docRef, { calendarConnected: true }, { merge: true });
+                }
+                
+                showSuccessMessage('✅ Calendar connected! Daily totals will now sync automatically.');
+                
+                // Sync all existing activities
+                await syncAllActivitiesToCalendar();
+            };
+
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                tokenClient.requestAccessToken({prompt: ''});
+            }
+        }
+        
+        async function disconnectCalendar() {
+            if (confirm('Disconnect calendar? Your calendar events will remain, but new activities won\'t be synced.')) {
+                const token = gapi.client.getToken();
+                if (token !== null) {
+                    google.accounts.oauth2.revoke(token.access_token);
+                    gapi.client.setToken('');
+                }
+                
+                calendarConnected = false;
+                updateCalendarButton(false);
+                
+                if (window.currentUser) {
+                    const docRef = doc(db, 'userSettings', window.currentUser.uid);
+                    await setDoc(docRef, { calendarConnected: false }, { merge: true });
+                }
+                
+                showSuccessMessage('📅 Calendar disconnected.');
+            }
+        }
+        
+        async function syncAllActivitiesToCalendar() {
+            if (!calendarConnected || activities.length === 0) return;
+            
+            const progressDiv = document.createElement('div');
+            progressDiv.textContent = 'Syncing to calendar...';
+            progressDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;color:#667eea;padding:30px 50px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:10001;font-weight:600;font-size:1.2em;';
+            document.body.appendChild(progressDiv);
+            
+            // Group activities by date
+            const dailyTotals = {};
+            activities.forEach(activity => {
+                const date = new Date(activity.date);
+                const dateKey = date.toISOString().split('T')[0];
+                dailyTotals[dateKey] = (dailyTotals[dateKey] || 0) + (activity.duration || 0);
+            });
+            
+            // Create/update calendar events for each day
+            for (const [date, minutes] of Object.entries(dailyTotals)) {
+                await updateCalendarEvent(date, minutes);
+            }
+            
+            document.body.removeChild(progressDiv);
+            showSuccessMessage('✅ All activities synced to calendar!');
+        }
+        
+        async function updateCalendarEvent(dateString, minutes) {
+            if (!calendarConnected) return;
+            
+            try {
+                const eventTitle = `🇫🇷 French Learning: ${minutes} minutes`;
+                const eventDescription = `Total French learning time for this day. View details in your French Learning Tracker.`;
+                
+                // Check if event already exists for this date
+                const timeMin = new Date(dateString + 'T00:00:00').toISOString();
+                const timeMax = new Date(dateString + 'T23:59:59').toISOString();
+                
+                const response = await gapi.client.calendar.events.list({
+                    calendarId: selectedCalendarId,
+                    timeMin: timeMin,
+                    timeMax: timeMax,
+                    q: '🇫🇷 French Learning',
+                    singleEvents: true,
+                });
+                
+                const existingEvent = response.result.items.find(event => 
+                    event.summary && event.summary.startsWith('🇫🇷 French Learning')
+                );
+                
+                const event = {
+                    summary: eventTitle,
+                    description: eventDescription,
+                    start: {
+                        date: dateString,
+                    },
+                    end: {
+                        date: dateString,
+                    },
+                    colorId: '10', // Green color
+                };
+                
+                if (existingEvent) {
+                    // Update existing event
+                    await gapi.client.calendar.events.update({
+                        calendarId: selectedCalendarId,
+                        eventId: existingEvent.id,
+                        resource: event,
+                    });
+                } else {
+                    // Create new event
+                    await gapi.client.calendar.events.insert({
+                        calendarId: selectedCalendarId,
+                        resource: event,
+                    });
+                }
+            } catch (error) {
+                console.error('Error updating calendar event:', error);
+            }
+        }
+        
+        async function deleteCalendarEvent(dateString) {
+            if (!calendarConnected) return;
+            
+            try {
+                const timeMin = new Date(dateString + 'T00:00:00').toISOString();
+                const timeMax = new Date(dateString + 'T23:59:59').toISOString();
+                
+                const response = await gapi.client.calendar.events.list({
+                    calendarId: selectedCalendarId,
+                    timeMin: timeMin,
+                    timeMax: timeMax,
+                    q: '🇫🇷 French Learning',
+                    singleEvents: true,
+                });
+                
+                const existingEvent = response.result.items.find(event => 
+                    event.summary && event.summary.startsWith('🇫🇷 French Learning')
+                );
+                
+                if (existingEvent) {
+                    await gapi.client.calendar.events.delete({
+                        calendarId: selectedCalendarId,
+                        eventId: existingEvent.id,
+                    });
+                }
+            } catch (error) {
+                console.error('Error deleting calendar event:', error);
+            }
+        }
+        
+        async function syncDayToCalendar(dateString) {
+            if (!calendarConnected) return;
+            
+            // Calculate total minutes for this day
+            const dayActivities = activities.filter(a => {
+                const actDate = new Date(a.date).toISOString().split('T')[0];
+                return actDate === dateString;
+            });
+            
+            const totalMinutes = dayActivities.reduce((sum, a) => sum + (a.duration || 0), 0);
+            
+            if (totalMinutes > 0) {
+                await updateCalendarEvent(dateString, totalMinutes);
+            } else {
+                await deleteCalendarEvent(dateString);
+            }
+        }
+        
+        // Load Google API libraries
+        window.addEventListener('load', () => {
+            const script1 = document.createElement('script');
+            script1.src = 'https://accounts.google.com/gsi/client';
+            script1.onload = gisLoaded;
+            document.head.appendChild(script1);
+            
+            gapiLoaded();
         });
     </script>
 </body>

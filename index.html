@@ -344,7 +344,18 @@
                 <div id="activitiesList"></div>
             </div>
 
-            <div style="text-align: center;">
+            <div class="input-section" style="margin-top: 30px;">
+                <h2>Summary & Analysis</h2>
+                <div id="summaryContent" style="margin-bottom: 20px;">
+                    <p><strong>Total Activities:</strong> <span id="summaryTotal">0</span></p>
+                    <p><strong>Total Time:</strong> <span id="summaryTime">0</span> minutes</p>
+                    <p><strong>Average per session:</strong> <span id="summaryAverage">0</span> minutes</p>
+                    <p><strong>Most common activity:</strong> <span id="summaryMostCommon">-</span></p>
+                </div>
+                <button onclick="generateReport()">Generate Report for AI Analysis</button>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
                 <button class="sign-out-btn" onclick="signOut()">Sign Out</button>
             </div>
         </div>
@@ -767,8 +778,95 @@
             loadActivities();
         }
 
+        // Update summary statistics
+        async function updateSummary() {
+            if (!currentUser) return;
+
+            const snapshot = await db.collection('users')
+                .doc(currentUser.uid)
+                .collection('activities')
+                .get();
+
+            const activities = [];
+            const typeCounts = {};
+            let totalTime = 0;
+
+            snapshot.forEach(doc => {
+                const activity = doc.data();
+                activities.push(activity);
+                totalTime += activity.duration;
+                typeCounts[activity.type] = (typeCounts[activity.type] || 0) + 1;
+            });
+
+            const average = activities.length > 0 ? Math.round(totalTime / activities.length) : 0;
+            const mostCommon = Object.keys(typeCounts).reduce((a, b) => 
+                typeCounts[a] > typeCounts[b] ? a : b, '-');
+
+            document.getElementById('summaryTotal').textContent = activities.length;
+            document.getElementById('summaryTime').textContent = totalTime;
+            document.getElementById('summaryAverage').textContent = average;
+            document.getElementById('summaryMostCommon').textContent = mostCommon;
+        }
+
+        // Generate report for AI analysis
+        async function generateReport() {
+            if (!currentUser) return;
+
+            const snapshot = await db.collection('users')
+                .doc(currentUser.uid)
+                .collection('activities')
+                .orderBy('date', 'desc')
+                .get();
+
+            let report = '=== FRENCH LEARNING PROGRESS REPORT ===\n\n';
+            
+            // Group by date
+            const dateMap = {};
+            snapshot.forEach(doc => {
+                const activity = doc.data();
+                const dateOnly = activity.date.split('T')[0];
+                if (!dateMap[dateOnly]) {
+                    dateMap[dateOnly] = [];
+                }
+                dateMap[dateOnly].push(activity);
+            });
+
+            // Generate report
+            const sortedDates = Object.keys(dateMap).sort().reverse();
+            sortedDates.forEach(date => {
+                const activities = dateMap[date];
+                const totalMinutes = activities.reduce((sum, act) => sum + act.duration, 0);
+                report += `\n${date} - Total: ${totalMinutes} minutes\n`;
+                activities.forEach(act => {
+                    report += `  • ${act.type}: ${act.duration} min`;
+                    if (act.notes) report += ` - ${act.notes}`;
+                    report += '\n';
+                });
+            });
+
+            report += '\n\n=== SUMMARY STATISTICS ===\n';
+            report += `Total Activities: ${snapshot.size}\n`;
+            report += `Total Time: ${snapshot.docs.reduce((sum, doc) => sum + doc.data().duration, 0)} minutes\n`;
+            report += `Average per session: ${Math.round(snapshot.docs.reduce((sum, doc) => sum + doc.data().duration, 0) / snapshot.size)} minutes\n`;
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(report).then(() => {
+                alert('Report copied to clipboard! You can now paste it into Claude or another AI for analysis.');
+            }).catch(err => {
+                // Fallback: show in alert
+                alert('Report generated! Copy this text:\n\n' + report.substring(0, 500) + '...');
+            });
+        }
+
         // Filter activities when date changes
         document.getElementById('filterDate').addEventListener('change', loadActivities);
+
+        // Update summary when stats are updated
+        const originalUpdateStats = updateStats;
+        updateStats = async function() {
+            await originalUpdateStats();
+            await updateSummary();
+        };
     </script>
 </body>
 </html>

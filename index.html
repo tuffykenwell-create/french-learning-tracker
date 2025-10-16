@@ -644,28 +644,36 @@
                 .orderBy('date', 'desc')
                 .orderBy('timestamp', 'desc');
 
-            if (filterDate) {
-                query = query.where('date', '==', filterDate);
-            }
-
             const snapshot = await query.limit(50).get();
             const activitiesList = document.getElementById('activitiesList');
 
-            if (snapshot.empty) {
-                activitiesList.innerHTML = '<div class="no-activities">No activities yet. Start tracking your French learning journey!</div>';
+            // Filter on client-side if date filter is set
+            let filteredDocs = snapshot.docs;
+            if (filterDate) {
+                filteredDocs = snapshot.docs.filter(doc => {
+                    const activity = doc.data();
+                    const activityDate = activity.date.split('T')[0]; // Get just YYYY-MM-DD
+                    return activityDate === filterDate;
+                });
+            }
+
+            if (filteredDocs.length === 0) {
+                activitiesList.innerHTML = '<div class="no-activities">No activities found. ' + 
+                    (filterDate ? 'Try clearing the filter.' : 'Start tracking your French learning journey!') + '</div>';
                 return;
             }
 
             activitiesList.innerHTML = '';
-            snapshot.forEach(doc => {
+            filteredDocs.forEach(doc => {
                 const activity = doc.data();
                 const activityDiv = document.createElement('div');
                 activityDiv.className = 'activity-item';
+                const activityDate = activity.date.split('T')[0]; // Get just the date part
                 activityDiv.innerHTML = `
                     <div class="activity-info">
                         <div class="activity-type">${activity.type} - ${activity.duration} minutes</div>
                         <div class="activity-details">
-                            ${new Date(activity.date).toLocaleDateString()} 
+                            ${activityDate}
                             ${activity.notes ? '- ' + activity.notes : ''}
                         </div>
                     </div>

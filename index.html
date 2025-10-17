@@ -573,8 +573,12 @@
         function showMainContent() {
             document.getElementById('authSection').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
-            loadActivities();
-            updateStats();
+            
+            // Load activities with a small delay to ensure everything is ready
+            setTimeout(() => {
+                loadActivities();
+                updateStats();
+            }, 100);
         }
 
         // Sign out

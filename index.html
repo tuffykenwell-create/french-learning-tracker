@@ -650,11 +650,11 @@
             const filterDate = document.getElementById('filterDate').value;
             
             try {
-                // Load from user's activities collection
+                // Load from user's activities collection, ordered by date
                 const snapshot = await db.collection('users')
                     .doc(currentUser.uid)
                     .collection('activities')
-                    .orderBy('timestamp', 'desc')
+                    .orderBy('date', 'desc')
                     .limit(50)
                     .get();
 
@@ -700,7 +700,7 @@
             } catch (error) {
                 console.error('Error loading activities:', error);
                 document.getElementById('activitiesList').innerHTML = 
-                    '<div class="no-activities">Error loading activities. Please refresh the page.</div>';
+                    '<div class="no-activities">Error loading activities. Check console for details.</div>';
             }
         }
 

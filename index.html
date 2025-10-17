@@ -305,12 +305,22 @@
                         <select id="activityType" required>
                             <option value="">Select an activity...</option>
                             <option value="Duolingo">Duolingo</option>
-                            <option value="Reading">Reading</option>
-                            <option value="Writing">Writing</option>
-                            <option value="Listening">Listening</option>
-                            <option value="Speaking">Speaking</option>
-                            <option value="Grammar">Grammar Practice</option>
-                            <option value="Vocabulary">Vocabulary Study</option>
+                            <option value="Book Reading">Book Reading</option>
+                            <option value="Audiobook">Audiobook</option>
+                            <option value="Podcast">Podcast</option>
+                            <option value="Video">Video</option>
+                            <option value="AI Chat">AI Chat</option>
+                            <option value="Conversation Practice">Conversation Practice</option>
+                            <option value="Shadowing">Shadowing</option>
+                            <option value="Read Aloud">Read Aloud</option>
+                            <option value="Sentence Diagramming">Sentence Diagramming</option>
+                            <option value="Grammar Exercise">Grammar Exercise</option>
+                            <option value="Vocabulary Practice">Vocabulary Practice</option>
+                            <option value="Writing Practice">Writing Practice</option>
+                            <option value="Translation">Translation</option>
+                            <option value="Zoom Class">Zoom Class</option>
+                            <option value="Lingoda Class">Lingoda Class</option>
+                            <option value="Babbel Live">Babbel Live</option>
                             <option value="Other">Other</option>
                         </select>
                     </div>
@@ -638,52 +648,60 @@
             if (!currentUser) return;
 
             const filterDate = document.getElementById('filterDate').value;
-            let query = db.collection('users')
-                .doc(currentUser.uid)
-                .collection('activities')
-                .orderBy('date', 'desc')
-                .orderBy('timestamp', 'desc');
+            
+            try {
+                // Load from user's activities collection
+                const snapshot = await db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('activities')
+                    .orderBy('timestamp', 'desc')
+                    .limit(50)
+                    .get();
 
-            const snapshot = await query.limit(50).get();
-            const activitiesList = document.getElementById('activitiesList');
+                const activitiesList = document.getElementById('activitiesList');
 
-            // Filter on client-side if date filter is set
-            let filteredDocs = snapshot.docs;
-            if (filterDate) {
-                filteredDocs = snapshot.docs.filter(doc => {
+                // Filter on client-side if date filter is set
+                let filteredDocs = snapshot.docs;
+                if (filterDate) {
+                    filteredDocs = snapshot.docs.filter(doc => {
+                        const activity = doc.data();
+                        const activityDate = activity.date.split('T')[0]; // Get just YYYY-MM-DD
+                        return activityDate === filterDate;
+                    });
+                }
+
+                if (filteredDocs.length === 0) {
+                    activitiesList.innerHTML = '<div class="no-activities">No activities found. ' + 
+                        (filterDate ? 'Try clearing the filter.' : 'Start tracking your French learning journey!') + '</div>';
+                    return;
+                }
+
+                activitiesList.innerHTML = '';
+                filteredDocs.forEach(doc => {
                     const activity = doc.data();
-                    const activityDate = activity.date.split('T')[0]; // Get just YYYY-MM-DD
-                    return activityDate === filterDate;
-                });
-            }
-
-            if (filteredDocs.length === 0) {
-                activitiesList.innerHTML = '<div class="no-activities">No activities found. ' + 
-                    (filterDate ? 'Try clearing the filter.' : 'Start tracking your French learning journey!') + '</div>';
-                return;
-            }
-
-            activitiesList.innerHTML = '';
-            filteredDocs.forEach(doc => {
-                const activity = doc.data();
-                const activityDiv = document.createElement('div');
-                activityDiv.className = 'activity-item';
-                const activityDate = activity.date.split('T')[0]; // Get just the date part
-                activityDiv.innerHTML = `
-                    <div class="activity-info">
-                        <div class="activity-type">${activity.type} - ${activity.duration} minutes</div>
-                        <div class="activity-details">
-                            ${activityDate}
-                            ${activity.notes ? '- ' + activity.notes : ''}
+                    const activityDiv = document.createElement('div');
+                    activityDiv.className = 'activity-item';
+                    const activityDate = activity.date.split('T')[0]; // Get just the date part
+                    activityDiv.innerHTML = `
+                        <div class="activity-info">
+                            <div class="activity-type">${activity.type} - ${activity.duration} minutes</div>
+                            <div class="activity-details">
+                                ${activityDate}
+                                ${activity.notes ? '- ' + activity.notes : ''}
+                            </div>
                         </div>
-                    </div>
-                    <div class="activity-actions">
-                        <button class="btn-edit" onclick="editActivity('${doc.id}')">Edit</button>
-                        <button class="btn-delete" onclick="deleteActivity('${doc.id}', '${activity.date}')">Delete</button>
-                    </div>
-                `;
-                activitiesList.appendChild(activityDiv);
-            });
+                        <div class="activity-actions">
+                            <button class="btn-edit" onclick="editActivity('${doc.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteActivity('${doc.id}', '${activity.date}')">Delete</button>
+                        </div>
+                    `;
+                    activitiesList.appendChild(activityDiv);
+                });
+            } catch (error) {
+                console.error('Error loading activities:', error);
+                document.getElementById('activitiesList').innerHTML = 
+                    '<div class="no-activities">Error loading activities. Please refresh the page.</div>';
+            }
         }
 
         // Update statistics

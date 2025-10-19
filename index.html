@@ -174,6 +174,16 @@
             margin-bottom: 5px;
         }
 
+        .activity-category {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 8px;
+        }
+
         .activity-details {
             color: #666;
             font-size: 0.9em;
@@ -301,27 +311,22 @@
                 <h2>Log New Activity</h2>
                 <form id="activityForm">
                     <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" required>
+                            <option value="">Select a category...</option>
+                            <option value="Reading">📖 Reading</option>
+                            <option value="Writing">✍️ Writing</option>
+                            <option value="Listening">👂 Listening</option>
+                            <option value="Speaking">🗣️ Speaking</option>
+                            <option value="Grammar">📚 Grammar</option>
+                            <option value="Vocabulary">💭 Vocabulary</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
                         <label for="activityType">Activity Type</label>
                         <select id="activityType" required>
-                            <option value="">Select an activity...</option>
-                            <option value="Duolingo">Duolingo</option>
-                            <option value="Book Reading">Book Reading</option>
-                            <option value="Audiobook">Audiobook</option>
-                            <option value="Podcast">Podcast</option>
-                            <option value="Video">Video</option>
-                            <option value="AI Chat">AI Chat</option>
-                            <option value="Conversation Practice">Conversation Practice</option>
-                            <option value="Shadowing">Shadowing</option>
-                            <option value="Read Aloud">Read Aloud</option>
-                            <option value="Sentence Diagramming">Sentence Diagramming</option>
-                            <option value="Grammar Exercise">Grammar Exercise</option>
-                            <option value="Vocabulary Practice">Vocabulary Practice</option>
-                            <option value="Writing Practice">Writing Practice</option>
-                            <option value="Translation">Translation</option>
-                            <option value="Zoom Class">Zoom Class</option>
-                            <option value="Lingoda Class">Lingoda Class</option>
-                            <option value="Babbel Live">Babbel Live</option>
-                            <option value="Other">Other</option>
+                            <option value="">Select a category first...</option>
                         </select>
                     </div>
 
@@ -398,83 +403,134 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // Google Calendar API configuration
-        const CLIENT_ID = '1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com';
-        const API_KEY = 'AIzaSyAoN9yI6dLRymNhZWhdAr_QX1Xz3fU9N1c';
-        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-        const SCOPES = 'https://www.googleapis.com/auth/calendar';
-
-        let calendarId = null;
         let currentUser = null;
         let accessToken = null;
-        let tokenClient = null;
+        let calendarId = null;
+        let calendarInitialized = false;
 
-        // Update the client ID in the HTML
-        document.addEventListener('DOMContentLoaded', function() {
-            const onloadDiv = document.getElementById('g_id_onload');
-            if (onloadDiv) {
-                onloadDiv.setAttribute('data-client_id', CLIENT_ID);
+        // Activity types organized by category
+        const activityTypes = {
+            'Reading': [
+                'Book Reading',
+                'Article Reading',
+                'News Reading',
+                'Comic/Manga',
+                'Online Content'
+            ],
+            'Writing': [
+                'Writing Practice',
+                'Translation',
+                'AI Chat',
+                'Journaling',
+                'Essay/Story Writing'
+            ],
+            'Listening': [
+                'Audiobook',
+                'Podcast',
+                'Video',
+                'Music',
+                'Radio'
+            ],
+            'Speaking': [
+                'Conversation Practice',
+                'Shadowing',
+                'Read Aloud',
+                'Zoom Class',
+                'Lingoda Class',
+                'Babbel Live',
+                'Recording Practice'
+            ],
+            'Grammar': [
+                'Grammar Exercise',
+                'Sentence Diagramming',
+                'Conjugation Practice',
+                'Grammar Book Study'
+            ],
+            'Vocabulary': [
+                'Duolingo',
+                'Vocabulary Practice',
+                'Flashcards',
+                'Word Lists',
+                'Anki'
+            ]
+        };
+
+        // Update activity type dropdown when category changes
+        document.getElementById('category').addEventListener('change', function() {
+            const category = this.value;
+            const activityTypeSelect = document.getElementById('activityType');
+            
+            if (!category) {
+                activityTypeSelect.innerHTML = '<option value="">Select a category first...</option>';
+                activityTypeSelect.disabled = true;
+                return;
             }
+            
+            activityTypeSelect.disabled = false;
+            activityTypeSelect.innerHTML = '<option value="">Select an activity...</option>';
+            
+            if (activityTypes[category]) {
+                activityTypes[category].forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type;
+                    option.textContent = type;
+                    activityTypeSelect.appendChild(option);
+                });
+            }
+            
+            // Add "Other" option
+            const otherOption = document.createElement('option');
+            otherOption.value = 'Other';
+            otherOption.textContent = 'Other';
+            activityTypeSelect.appendChild(otherOption);
         });
 
-        // Handle Google Sign-In credential response
-        function handleCredentialResponse(response) {
-            const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
-            
-            auth.signInWithCredential(credential)
-                .then((result) => {
-                    currentUser = result.user;
-                    console.log('Signed in:', currentUser.email);
-                    showMainContent();
-                    initializeCalendarAPI();
-                })
-                .catch((error) => {
-                    console.error('Error signing in:', error);
-                    alert('Error signing in: ' + error.message);
-                });
+        // Handle Google Sign-In
+        async function handleCredentialResponse(response) {
+            try {
+                const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
+                const result = await auth.signInWithCredential(credential);
+                currentUser = result.user;
+                accessToken = response.credential;
+
+                // Initialize calendar after sign-in
+                await initializeCalendar();
+                
+                showMainContent();
+            } catch (error) {
+                console.error('Error signing in:', error);
+                alert('Error signing in: ' + error.message);
+            }
         }
 
-        // Initialize Google Calendar API with new token client
-        function initializeCalendarAPI() {
-            gapi.load('client', async () => {
-                try {
-                    // Load the Calendar API client WITHOUT using gapi.client.init (which is deprecated)
-                    await gapi.client.load(DISCOVERY_DOC);
-                    gapi.client.setApiKey(API_KEY);
-
-                    // Initialize the token client for OAuth
-                    tokenClient = google.accounts.oauth2.initTokenClient({
-                        client_id: CLIENT_ID,
-                        scope: SCOPES,
-                        callback: async (response) => {
-                            if (response.error !== undefined) {
-                                console.error('Token error:', response);
-                                return;
-                            }
-                            accessToken = response.access_token;
-                            gapi.client.setToken({access_token: accessToken});
-                            console.log('Access token received, finding/creating calendar...');
-                            await findOrCreateCalendar();
-                        },
-                    });
-
-                    // Request access token
-                    console.log('Requesting Calendar API access...');
-                    if (accessToken === null) {
-                        tokenClient.requestAccessToken({prompt: 'consent'});
-                    } else {
-                        tokenClient.requestAccessToken({prompt: ''});
+        // Initialize Google Calendar API
+        async function initializeCalendar() {
+            return new Promise((resolve, reject) => {
+                gapi.load('client', async () => {
+                    try {
+                        await gapi.client.init({
+                            apiKey: firebaseConfig.apiKey,
+                            clientId: '1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com',
+                            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
+                            scope: 'https://www.googleapis.com/auth/calendar.events'
+                        });
+                        
+                        gapi.client.setToken({ access_token: accessToken });
+                        calendarInitialized = true;
+                        await findOrCreateCalendar();
+                        resolve();
+                    } catch (error) {
+                        console.error('Error initializing Calendar API:', error);
+                        reject(error);
                     }
-
-                    console.log('Calendar API client loaded successfully');
-                } catch (error) {
-                    console.error('Error initializing Calendar API:', error);
-                }
+                });
             });
         }
 
         // Find or create the French Learning calendar
         async function findOrCreateCalendar() {
+            if (!calendarInitialized) return;
+
             try {
                 const response = await gapi.client.calendar.calendarList.list();
                 const calendars = response.result.items || [];
@@ -500,33 +556,41 @@
             }
         }
 
-        // Update or create calendar event for a specific date
+        // Update calendar event for a specific date
         async function updateCalendarEvent(date) {
-            if (!calendarId || !accessToken) {
-                console.log('Calendar not ready yet');
-                return;
-            }
+            if (!calendarInitialized || !calendarId) return;
 
             try {
                 const activities = await getActivitiesForDate(date);
                 const totalMinutes = activities.reduce((sum, act) => sum + act.duration, 0);
 
-                const eventDate = new Date(date + 'T00:00:00');
-                const dateStr = eventDate.toISOString().split('T')[0];
+                // Get category breakdown
+                const categoryBreakdown = {};
+                activities.forEach(act => {
+                    const cat = act.category || 'Other';
+                    categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + act.duration;
+                });
+
+                const breakdownText = Object.entries(categoryBreakdown)
+                    .map(([cat, mins]) => `${cat}: ${mins}min`)
+                    .join(', ');
+
+                const dateObj = new Date(date + 'T00:00:00');
+                const dateStr = date;
+                
+                const eventResource = {
+                    summary: `🇫🇷 French Learning - ${totalMinutes} mins`,
+                    description: `Total practice: ${totalMinutes} minutes\n\nBreakdown:\n${breakdownText}\n\nActivities:\n${activities.map(a => `• ${a.category}: ${a.type} (${a.duration}min)`).join('\n')}`,
+                    start: { date: dateStr },
+                    end: { date: dateStr }
+                };
 
                 const existingEvents = await gapi.client.calendar.events.list({
                     calendarId: calendarId,
-                    timeMin: dateStr + 'T00:00:00Z',
-                    timeMax: dateStr + 'T23:59:59Z',
-                    q: '🇫🇷 French:'
+                    timeMin: new Date(date + 'T00:00:00').toISOString(),
+                    timeMax: new Date(date + 'T23:59:59').toISOString(),
+                    q: 'French Learning'
                 });
-
-                const eventResource = {
-                    summary: `🇫🇷 French: ${totalMinutes} min`,
-                    start: { date: dateStr },
-                    end: { date: dateStr },
-                    description: `French learning activities:\n${activities.map(a => `- ${a.type}: ${a.duration} min`).join('\n')}`
-                };
 
                 if (existingEvents.result.items && existingEvents.result.items.length > 0) {
                     if (totalMinutes > 0) {
@@ -574,7 +638,6 @@
             document.getElementById('authSection').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
             
-            // Load activities with a small delay to ensure everything is ready
             setTimeout(() => {
                 loadActivities();
                 updateStats();
@@ -600,7 +663,6 @@
             if (user) {
                 currentUser = user;
                 showMainContent();
-                // Don't auto-init calendar here - wait for user to sign in fresh
             }
         });
 
@@ -620,6 +682,7 @@
             }
 
             const activity = {
+                category: document.getElementById('category').value,
                 type: document.getElementById('activityType').value,
                 duration: parseInt(document.getElementById('duration').value),
                 date: document.getElementById('date').value,
@@ -638,6 +701,10 @@
                 this.reset();
                 const today = new Date().toISOString().split('T')[0];
                 document.getElementById('date').value = today;
+                
+                // Reset the activity type dropdown
+                document.getElementById('activityType').innerHTML = '<option value="">Select a category first...</option>';
+                document.getElementById('activityType').disabled = true;
 
                 loadActivities();
                 updateStats();
@@ -647,14 +714,13 @@
             }
         });
 
-        // Load activities
+        // Load activities from Firebase
         async function loadActivities() {
             if (!currentUser) return;
 
             const filterDate = document.getElementById('filterDate').value;
             
             try {
-                // Load from user's activities collection, ordered by date
                 const snapshot = await db.collection('users')
                     .doc(currentUser.uid)
                     .collection('activities')
@@ -664,12 +730,11 @@
 
                 const activitiesList = document.getElementById('activitiesList');
 
-                // Filter on client-side if date filter is set
                 let filteredDocs = snapshot.docs;
                 if (filterDate) {
                     filteredDocs = snapshot.docs.filter(doc => {
                         const activity = doc.data();
-                        const activityDate = activity.date.split('T')[0]; // Get just YYYY-MM-DD
+                        const activityDate = activity.date.split('T')[0];
                         return activityDate === filterDate;
                     });
                 }
@@ -685,10 +750,17 @@
                     const activity = doc.data();
                     const activityDiv = document.createElement('div');
                     activityDiv.className = 'activity-item';
-                    const activityDate = activity.date.split('T')[0]; // Get just the date part
+                    const activityDate = activity.date.split('T')[0];
+                    
+                    // Show category badge and type
+                    const categoryBadge = activity.category ? 
+                        `<span class="activity-category">${activity.category}</span>` : '';
+                    
                     activityDiv.innerHTML = `
                         <div class="activity-info">
-                            <div class="activity-type">${activity.type} - ${activity.duration} minutes</div>
+                            <div class="activity-type">
+                                ${categoryBadge}${activity.type} - ${activity.duration} minutes
+                            </div>
                             <div class="activity-details">
                                 ${activityDate}
                                 ${activity.notes ? '- ' + activity.notes : ''}
@@ -780,7 +852,7 @@
             }
         }
 
-        // Edit activity (simple version - you can enhance this)
+        // Edit activity
         async function editActivity(id) {
             const doc = await db.collection('users')
                 .doc(currentUser.uid)
@@ -792,10 +864,19 @@
 
             const activity = doc.data();
             
-            document.getElementById('activityType').value = activity.type;
-            document.getElementById('duration').value = activity.duration;
-            document.getElementById('date').value = activity.date;
-            document.getElementById('notes').value = activity.notes || '';
+            // Set the category first
+            document.getElementById('category').value = activity.category || '';
+            
+            // Trigger the category change event to populate activity types
+            document.getElementById('category').dispatchEvent(new Event('change'));
+            
+            // Then set the activity type after a brief delay to ensure the dropdown is populated
+            setTimeout(() => {
+                document.getElementById('activityType').value = activity.type;
+                document.getElementById('duration').value = activity.duration;
+                document.getElementById('date').value = activity.date;
+                document.getElementById('notes').value = activity.notes || '';
+            }, 50);
 
             await deleteActivity(id, activity.date);
             
@@ -868,7 +949,8 @@
                 const totalMinutes = activities.reduce((sum, act) => sum + act.duration, 0);
                 report += `\n${date} - Total: ${totalMinutes} minutes\n`;
                 activities.forEach(act => {
-                    report += `  • ${act.type}: ${act.duration} min`;
+                    const categoryLabel = act.category ? `[${act.category}] ` : '';
+                    report += `  • ${categoryLabel}${act.type}: ${act.duration} min`;
                     if (act.notes) report += ` - ${act.notes}`;
                     report += '\n';
                 });
@@ -879,11 +961,23 @@
             report += `Total Time: ${snapshot.docs.reduce((sum, doc) => sum + doc.data().duration, 0)} minutes\n`;
             report += `Average per session: ${Math.round(snapshot.docs.reduce((sum, doc) => sum + doc.data().duration, 0) / snapshot.size)} minutes\n`;
 
+            // Category breakdown
+            const categoryTotals = {};
+            snapshot.forEach(doc => {
+                const activity = doc.data();
+                const cat = activity.category || 'Other';
+                categoryTotals[cat] = (categoryTotals[cat] || 0) + activity.duration;
+            });
+
+            report += '\n=== CATEGORY BREAKDOWN ===\n';
+            Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).forEach(([cat, mins]) => {
+                report += `${cat}: ${mins} minutes\n`;
+            });
+
             // Copy to clipboard
             navigator.clipboard.writeText(report).then(() => {
                 alert('Report copied to clipboard! You can now paste it into Claude or another AI for analysis.');
             }).catch(err => {
-                // Fallback: show in alert
                 alert('Report generated! Copy this text:\n\n' + report.substring(0, 500) + '...');
             });
         }

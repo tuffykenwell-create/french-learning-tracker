@@ -952,7 +952,7 @@
                     .doc('focus')
                     .get();
                 
-                if (focusDoc.exists()) {
+                if (focusDoc.exists) {
                     const focus = focusDoc.data().text;
                     if (focus) {
                         document.getElementById('focusReminderText').textContent = focus;
@@ -979,7 +979,7 @@
                     .doc('focus')
                     .get();
                 
-                if (focusDoc.exists()) {
+                if (focusDoc.exists) {
                     document.getElementById('activityFocus').value = focusDoc.data().text || '';
                 } else {
                     document.getElementById('activityFocus').value = '';

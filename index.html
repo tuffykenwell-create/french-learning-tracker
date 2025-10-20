@@ -492,19 +492,14 @@
                 const result = await auth.signInWithCredential(credential);
                 currentUser = result.user;
 
-                // Get the access token from Firebase after sign-in
-                const token = await currentUser.getIdToken();
-                accessToken = token;
-
-                // Initialize calendar after sign-in
-                try {
-                    await initializeCalendar();
-                } catch (calError) {
-                    console.warn('Calendar initialization failed, but sign-in succeeded:', calError);
-                    // Continue without calendar - app will still work for tracking
-                }
-                
                 showMainContent();
+                
+                // Initialize calendar after showing content (no await, runs in background)
+                initializeCalendar().catch(error => {
+                    console.warn('Calendar not available:', error);
+                    // App continues to work without calendar
+                });
+                
             } catch (error) {
                 console.error('Error signing in:', error);
                 alert('Error signing in: ' + error.message);
@@ -516,29 +511,27 @@
             return new Promise((resolve, reject) => {
                 gapi.load('client', async () => {
                     try {
-                        // First initialize the client
-                        await gapi.client.init({
-                            apiKey: firebaseConfig.apiKey,
-                            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
-                        });
+                        // Load the calendar API
+                        await gapi.client.load('calendar', 'v3');
                         
-                        // Then request authorization
+                        // Create a token client for OAuth
                         const tokenClient = google.accounts.oauth2.initTokenClient({
                             client_id: '1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com',
                             scope: 'https://www.googleapis.com/auth/calendar.events',
-                            callback: async (response) => {
-                                if (response.error) {
-                                    console.error('Token error:', response);
-                                    reject(response);
+                            callback: async (tokenResponse) => {
+                                if (tokenResponse.error) {
+                                    console.error('Token error:', tokenResponse);
+                                    reject(tokenResponse);
                                     return;
                                 }
                                 
-                                accessToken = response.access_token;
-                                gapi.client.setToken({ access_token: response.access_token });
+                                accessToken = tokenResponse.access_token;
+                                gapi.client.setToken({ access_token: tokenResponse.access_token });
                                 calendarInitialized = true;
                                 
                                 try {
                                     await findOrCreateCalendar();
+                                    console.log('Calendar initialized successfully!');
                                     resolve();
                                 } catch (error) {
                                     console.error('Error finding/creating calendar:', error);
@@ -547,11 +540,11 @@
                             }
                         });
                         
-                        // Request the token
+                        // Request the token (will show popup)
                         tokenClient.requestAccessToken({ prompt: '' });
                         
                     } catch (error) {
-                        console.error('Error initializing Calendar API:', error);
+                        console.error('Error loading calendar API:', error);
                         reject(error);
                     }
                 });

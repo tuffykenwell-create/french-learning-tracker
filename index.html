@@ -300,10 +300,6 @@
         <div class="header">
             <h1>🇫🇷 French Learning Tracker</h1>
             <p>Track your journey to fluency</p>
-            <div id="focusReminder" class="focus-reminder">
-                <div class="focus-reminder-title">🎯 Today's Focus:</div>
-                <div id="focusReminderText" class="focus-reminder-text"></div>
-            </div>
         </div>
 
         <div id="authSection" class="auth-section">
@@ -324,10 +320,6 @@
         </div>
 
         <div id="mainContent" class="content" style="display: none;">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <button class="btn-focus" onclick="openFocusModal()">🎯 Set Focus</button>
-            </div>
-
             <div class="stats-grid">
                 <div class="stat-card">
                     <h3>Total Time</h3>
@@ -417,28 +409,6 @@
             <div style="text-align: center; margin-top: 20px;">
                 <button class="sign-out-btn" onclick="signOut()">Sign Out</button>
             </div>
-        </div>
-    </div>
-
-    <!-- Set Focus Modal -->
-    <div id="focusModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-        <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
-            <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="color: #667eea; margin: 0;">🎯 Set Your Focus</h2>
-                <button onclick="closeFocusModal()" style="background: none; border: none; font-size: 2em; cursor: pointer; color: #999; line-height: 1; padding: 0; width: 30px; height: 30px;">&times;</button>
-            </div>
-            <p style="margin-bottom: 15px; color: #666;">What do you want to focus on this week? This will appear as a reminder at the top of your tracker.</p>
-            <form onsubmit="saveFocus(event)">
-                <div class="form-group">
-                    <label for="activityFocus">Focus Goal</label>
-                    <textarea id="activityFocus" placeholder="e.g., Practice speaking 15 minutes daily" rows="3"></textarea>
-                </div>
-                <button type="submit" class="btn-focus" style="width: 100%;">
-                    Save Focus
-                </button>
-            </form>
-        </div>
         </div>
     </div>
 
@@ -589,7 +559,6 @@
             setTimeout(() => {
                 loadActivities();
                 updateStats();
-                loadFocus();
             }, 100);
         }
 
@@ -942,89 +911,6 @@
         };
 
         // Load Focus from Firestore
-        async function loadFocus() {
-            if (!currentUser) return;
-
-            try {
-                const focusDoc = await db.collection('users')
-                    .doc(currentUser.uid)
-                    .collection('settings')
-                    .doc('focus')
-                    .get();
-                
-                if (focusDoc.exists) {
-                    const focus = focusDoc.data().text;
-                    if (focus) {
-                        document.getElementById('focusReminderText').textContent = focus;
-                        document.getElementById('focusReminder').style.display = 'block';
-                    } else {
-                        document.getElementById('focusReminder').style.display = 'none';
-                    }
-                } else {
-                    document.getElementById('focusReminder').style.display = 'none';
-                }
-            } catch (error) {
-                console.error('Error loading focus:', error);
-            }
-        }
-
-        // Open Focus Modal
-        async function openFocusModal() {
-            if (!currentUser) return;
-
-            try {
-                const focusDoc = await db.collection('users')
-                    .doc(currentUser.uid)
-                    .collection('settings')
-                    .doc('focus')
-                    .get();
-                
-                if (focusDoc.exists) {
-                    document.getElementById('activityFocus').value = focusDoc.data().text || '';
-                } else {
-                    document.getElementById('activityFocus').value = '';
-                }
-                document.getElementById('focusModal').style.display = 'flex';
-            } catch (error) {
-                console.error('Error opening focus modal:', error);
-            }
-        }
-
-        // Close Focus Modal
-        function closeFocusModal() {
-            document.getElementById('focusModal').style.display = 'none';
-        }
-
-        // Save Focus
-        async function saveFocus(event) {
-            event.preventDefault();
-            if (!currentUser) return;
-
-            const focus = document.getElementById('activityFocus').value.trim();
-            
-            try {
-                await db.collection('users')
-                    .doc(currentUser.uid)
-                    .collection('settings')
-                    .doc('focus')
-                    .set({
-                        text: focus,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                
-                closeFocusModal();
-                loadFocus();
-                alert(focus ? '🎯 Focus updated!' : '🎯 Focus cleared!');
-            } catch (error) {
-                console.error('Error saving focus:', error);
-                alert('Failed to save focus. Please try again.');
-            }
-        }
-
-        // Close modal when clicking outside
-        document.getElementById('focusModal').addEventListener('click', function(e) {
-            if (e.target === this) closeFocusModal();
-        });
     </script>
 </body>
 </html>

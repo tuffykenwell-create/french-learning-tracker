@@ -491,10 +491,18 @@
                 const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
                 const result = await auth.signInWithCredential(credential);
                 currentUser = result.user;
-                accessToken = response.credential;
+
+                // Get the access token from Firebase after sign-in
+                const token = await currentUser.getIdToken();
+                accessToken = token;
 
                 // Initialize calendar after sign-in
-                await initializeCalendar();
+                try {
+                    await initializeCalendar();
+                } catch (calError) {
+                    console.warn('Calendar initialization failed, but sign-in succeeded:', calError);
+                    // Continue without calendar - app will still work for tracking
+                }
                 
                 showMainContent();
             } catch (error) {
@@ -508,17 +516,40 @@
             return new Promise((resolve, reject) => {
                 gapi.load('client', async () => {
                     try {
+                        // First initialize the client
                         await gapi.client.init({
                             apiKey: firebaseConfig.apiKey,
-                            clientId: '1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com',
-                            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
-                            scope: 'https://www.googleapis.com/auth/calendar.events'
+                            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
                         });
                         
-                        gapi.client.setToken({ access_token: accessToken });
-                        calendarInitialized = true;
-                        await findOrCreateCalendar();
-                        resolve();
+                        // Then request authorization
+                        const tokenClient = google.accounts.oauth2.initTokenClient({
+                            client_id: '1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com',
+                            scope: 'https://www.googleapis.com/auth/calendar.events',
+                            callback: async (response) => {
+                                if (response.error) {
+                                    console.error('Token error:', response);
+                                    reject(response);
+                                    return;
+                                }
+                                
+                                accessToken = response.access_token;
+                                gapi.client.setToken({ access_token: response.access_token });
+                                calendarInitialized = true;
+                                
+                                try {
+                                    await findOrCreateCalendar();
+                                    resolve();
+                                } catch (error) {
+                                    console.error('Error finding/creating calendar:', error);
+                                    reject(error);
+                                }
+                            }
+                        });
+                        
+                        // Request the token
+                        tokenClient.requestAccessToken({ prompt: '' });
+                        
                     } catch (error) {
                         console.error('Error initializing Calendar API:', error);
                         reject(error);

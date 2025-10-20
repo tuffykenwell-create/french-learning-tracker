@@ -227,6 +227,42 @@
             margin-top: 20px;
         }
 
+        .focus-reminder {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .focus-reminder-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 5px;
+        }
+        
+        .focus-reminder-text {
+            color: #78350f;
+        }
+
+        .btn-focus {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn-focus:hover {
+            background: #d97706;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4);
+        }
+
         .no-activities {
             text-align: center;
             color: #999;
@@ -264,6 +300,10 @@
         <div class="header">
             <h1>🇫🇷 French Learning Tracker</h1>
             <p>Track your journey to fluency</p>
+            <div id="focusReminder" class="focus-reminder">
+                <div class="focus-reminder-title">🎯 Today's Focus:</div>
+                <div id="focusReminderText" class="focus-reminder-text"></div>
+            </div>
         </div>
 
         <div id="authSection" class="auth-section">
@@ -368,11 +408,32 @@
                     <p><strong>Most common activity:</strong> <span id="summaryMostCommon">-</span></p>
                 </div>
                 <button onclick="generateReport()">Generate Report for AI Analysis</button>
+                <button class="btn-focus" onclick="openFocusModal()" style="margin-left: 10px;">🎯 Set Focus</button>
             </div>
 
             <div style="text-align: center; margin-top: 20px;">
                 <button class="sign-out-btn" onclick="signOut()">Sign Out</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Set Focus Modal -->
+    <div id="focusModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: #667eea; margin: 0;">🎯 Set Your Focus</h2>
+                <button onclick="closeFocusModal()" style="background: none; border: none; font-size: 2em; cursor: pointer; color: #999; line-height: 1; padding: 0; width: 30px; height: 30px;">&times;</button>
+            </div>
+            <p style="margin-bottom: 15px; color: #666;">What do you want to focus on this week? This will appear as a reminder at the top of your tracker.</p>
+            <form onsubmit="saveFocus(event)">
+                <div class="form-group">
+                    <label for="activityFocus">Focus Goal</label>
+                    <textarea id="activityFocus" placeholder="e.g., Practice speaking 15 minutes daily" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn-focus" style="width: 100%;">
+                    Save Focus
+                </button>
+            </form>
         </div>
     </div>
 
@@ -407,6 +468,13 @@
         let accessToken = null;
         let calendarId = null;
         let calendarInitialized = false;
+        let tokenClient = null;
+
+        // Calendar API configuration
+        const CLIENT_ID = '1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com';
+        const API_KEY = 'AIzaSyAoN9yI6dLRymNhZWhdAr_QX1Xz3fU9N1c';
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
+        const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 
         // Activity types organized by category
         const activityTypes = {
@@ -486,175 +554,26 @@
         });
 
         // Handle Google Sign-In
-        async function handleCredentialResponse(response) {
-            try {
-                const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
-                const result = await auth.signInWithCredential(credential);
-                currentUser = result.user;
-
-                showMainContent();
-                
-                // Initialize calendar after showing content (no await, runs in background)
-                initializeCalendar().catch(error => {
-                    console.warn('Calendar not available:', error);
-                    // App continues to work without calendar
+        function handleCredentialResponse(response) {
+            const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
+            
+            auth.signInWithCredential(credential)
+                .then((result) => {
+                    currentUser = result.user;
+                    console.log('Signed in:', currentUser.email);
+                    showMainContent();
+                })
+                .catch((error) => {
+                    console.error('Error signing in:', error);
+                    alert('Error signing in: ' + error.message);
                 });
-                
-            } catch (error) {
-                console.error('Error signing in:', error);
-                alert('Error signing in: ' + error.message);
-            }
         }
 
-        // Initialize Google Calendar API
-        async function initializeCalendar() {
-            return new Promise((resolve, reject) => {
-                gapi.load('client', async () => {
-                    try {
-                        // Load the calendar API
-                        await gapi.client.load('calendar', 'v3');
-                        
-                        // Create a token client for OAuth
-                        const tokenClient = google.accounts.oauth2.initTokenClient({
-                            client_id: '1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com',
-                            scope: 'https://www.googleapis.com/auth/calendar.events',
-                            callback: async (tokenResponse) => {
-                                if (tokenResponse.error) {
-                                    console.error('Token error:', tokenResponse);
-                                    reject(tokenResponse);
-                                    return;
-                                }
-                                
-                                accessToken = tokenResponse.access_token;
-                                gapi.client.setToken({ access_token: tokenResponse.access_token });
-                                calendarInitialized = true;
-                                
-                                try {
-                                    await findOrCreateCalendar();
-                                    console.log('Calendar initialized successfully!');
-                                    resolve();
-                                } catch (error) {
-                                    console.error('Error finding/creating calendar:', error);
-                                    reject(error);
-                                }
-                            }
-                        });
-                        
-                        // Request the token (will show popup)
-                        tokenClient.requestAccessToken({ prompt: '' });
-                        
-                    } catch (error) {
-                        console.error('Error loading calendar API:', error);
-                        reject(error);
-                    }
-                });
-            });
-        }
-
-        // Find or create the French Learning calendar
-        async function findOrCreateCalendar() {
-            if (!calendarInitialized) return;
-
-            try {
-                const response = await gapi.client.calendar.calendarList.list();
-                const calendars = response.result.items || [];
-                
-                const frenchCal = calendars.find(cal => cal.summary === 'French Learning');
-                
-                if (frenchCal) {
-                    calendarId = frenchCal.id;
-                    console.log('Found French Learning calendar:', calendarId);
-                } else {
-                    const newCal = await gapi.client.calendar.calendars.insert({
-                        resource: {
-                            summary: 'French Learning',
-                            description: 'Automatic tracking of French learning activities',
-                            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                        }
-                    });
-                    calendarId = newCal.result.id;
-                    console.log('Created French Learning calendar:', calendarId);
-                }
-            } catch (error) {
-                console.error('Error with calendar:', error);
-            }
-        }
-
-        // Update calendar event for a specific date
+        // Initialize Google Calendar API with new token client
+        // Update calendar event for a specific date (disabled)
         async function updateCalendarEvent(date) {
-            if (!calendarInitialized || !calendarId) return;
-
-            try {
-                const activities = await getActivitiesForDate(date);
-                const totalMinutes = activities.reduce((sum, act) => sum + act.duration, 0);
-
-                // Get category breakdown
-                const categoryBreakdown = {};
-                activities.forEach(act => {
-                    const cat = act.category || 'Other';
-                    categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + act.duration;
-                });
-
-                const breakdownText = Object.entries(categoryBreakdown)
-                    .map(([cat, mins]) => `${cat}: ${mins}min`)
-                    .join(', ');
-
-                const dateObj = new Date(date + 'T00:00:00');
-                const dateStr = date;
-                
-                const eventResource = {
-                    summary: `🇫🇷 French Learning - ${totalMinutes} mins`,
-                    description: `Total practice: ${totalMinutes} minutes\n\nBreakdown:\n${breakdownText}\n\nActivities:\n${activities.map(a => `• ${a.category}: ${a.type} (${a.duration}min)`).join('\n')}`,
-                    start: { date: dateStr },
-                    end: { date: dateStr }
-                };
-
-                const existingEvents = await gapi.client.calendar.events.list({
-                    calendarId: calendarId,
-                    timeMin: new Date(date + 'T00:00:00').toISOString(),
-                    timeMax: new Date(date + 'T23:59:59').toISOString(),
-                    q: 'French Learning'
-                });
-
-                if (existingEvents.result.items && existingEvents.result.items.length > 0) {
-                    if (totalMinutes > 0) {
-                        await gapi.client.calendar.events.update({
-                            calendarId: calendarId,
-                            eventId: existingEvents.result.items[0].id,
-                            resource: eventResource
-                        });
-                        console.log('Updated calendar event');
-                    } else {
-                        await gapi.client.calendar.events.delete({
-                            calendarId: calendarId,
-                            eventId: existingEvents.result.items[0].id
-                        });
-                        console.log('Deleted calendar event (no activities)');
-                    }
-                } else if (totalMinutes > 0) {
-                    await gapi.client.calendar.events.insert({
-                        calendarId: calendarId,
-                        resource: eventResource
-                    });
-                    console.log('Created calendar event');
-                }
-            } catch (error) {
-                console.error('Error updating calendar:', error);
-            }
-        }
-
-        // Get activities for a specific date
-        async function getActivitiesForDate(date) {
-            const snapshot = await db.collection('users')
-                .doc(currentUser.uid)
-                .collection('activities')
-                .where('date', '==', date)
-                .get();
-
-            return snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
+            // Calendar integration disabled - function does nothing
+            return;
         }
 
         // Show main content and hide auth section
@@ -665,6 +584,7 @@
             setTimeout(() => {
                 loadActivities();
                 updateStats();
+                loadFocus();
             }, 100);
         }
 
@@ -1015,6 +935,91 @@
             await originalUpdateStats();
             await updateSummary();
         };
+
+        // Load Focus from Firestore
+        async function loadFocus() {
+            if (!currentUser) return;
+
+            try {
+                const focusDoc = await db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('settings')
+                    .doc('focus')
+                    .get();
+                
+                if (focusDoc.exists()) {
+                    const focus = focusDoc.data().text;
+                    if (focus) {
+                        document.getElementById('focusReminderText').textContent = focus;
+                        document.getElementById('focusReminder').style.display = 'block';
+                    } else {
+                        document.getElementById('focusReminder').style.display = 'none';
+                    }
+                } else {
+                    document.getElementById('focusReminder').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading focus:', error);
+            }
+        }
+
+        // Open Focus Modal
+        async function openFocusModal() {
+            if (!currentUser) return;
+
+            try {
+                const focusDoc = await db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('settings')
+                    .doc('focus')
+                    .get();
+                
+                if (focusDoc.exists()) {
+                    document.getElementById('activityFocus').value = focusDoc.data().text || '';
+                } else {
+                    document.getElementById('activityFocus').value = '';
+                }
+                document.getElementById('focusModal').style.display = 'flex';
+            } catch (error) {
+                console.error('Error opening focus modal:', error);
+            }
+        }
+
+        // Close Focus Modal
+        function closeFocusModal() {
+            document.getElementById('focusModal').style.display = 'none';
+        }
+
+        // Save Focus
+        async function saveFocus(event) {
+            event.preventDefault();
+            if (!currentUser) return;
+
+            const focus = document.getElementById('activityFocus').value.trim();
+            
+            try {
+                await db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('settings')
+                    .doc('focus')
+                    .set({
+                        text: focus,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                
+                closeFocusModal();
+                loadFocus();
+                alert(focus ? '🎯 Focus updated!' : '🎯 Focus cleared!');
+            } catch (error) {
+                console.error('Error saving focus:', error);
+                alert('Failed to save focus. Please try again.');
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('focusModal').addEventListener('click', function(e) {
+            if (e.target === this) closeFocusModal();
+        });
     </script>
 </body>
 </html>

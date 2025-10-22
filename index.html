@@ -646,6 +646,34 @@
             }
         });
 
+        // Format timestamp to readable format
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return '';
+            
+            let date;
+            if (timestamp.toDate) {
+                // Firestore Timestamp
+                date = timestamp.toDate();
+            } else if (timestamp.seconds) {
+                // Firestore Timestamp object
+                date = new Date(timestamp.seconds * 1000);
+            } else {
+                // Regular date string
+                date = new Date(timestamp);
+            }
+            
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            let hours = date.getHours();
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            
+            return `${year}-${month}-${day} at ${hours}:${minutes} ${ampm}`;
+        }
+
         // Load and display activities
         function loadActivities() {
             if (!currentUser) return;
@@ -680,12 +708,16 @@
                 filteredActivities.forEach((activity) => {
                     const activityDiv = document.createElement('div');
                     activityDiv.className = 'activity-item';
+                    
+                    // Format the timestamp for display
+                    const timeDisplay = activity.timestamp ? formatTimestamp(activity.timestamp) : activity.date;
+                    
                     activityDiv.innerHTML = `
                         <div class="activity-info">
                             <div class="activity-type">${activity.type}</div>
                             <div>
                                 <span class="activity-category">${activity.category}</span>
-                                <span class="activity-details">${activity.duration} min • ${activity.date}</span>
+                                <span class="activity-details">${activity.duration} min • ${timeDisplay}</span>
                             </div>
                             ${activity.notes ? `<div class="activity-details" style="margin-top: 5px;">${activity.notes}</div>` : ''}
                         </div>

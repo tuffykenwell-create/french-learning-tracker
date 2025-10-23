@@ -44,7 +44,6 @@
             opacity: 0.9;
         }
 
-        /* NEW: Week Tracker Styles */
         .week-tracker {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             color: white;
@@ -173,7 +172,6 @@
             font-weight: 500;
         }
 
-        /* NEW: Checkbox styling */
         .checkbox-group {
             display: flex;
             align-items: center;
@@ -189,6 +187,36 @@
         .checkbox-group label {
             margin-bottom: 0;
             cursor: pointer;
+        }
+
+        /* NEW: File upload styling */
+        .file-upload-group {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #fff;
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            transition: border-color 0.3s;
+        }
+
+        .file-upload-group:hover {
+            border-color: #667eea;
+        }
+
+        .file-upload-group label {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .file-upload-group input[type="file"] {
+            border: none;
+            padding: 8px 0;
+        }
+
+        .file-info {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 5px;
         }
 
         input, select, textarea {
@@ -272,7 +300,6 @@
             margin-right: 8px;
         }
 
-        /* NEW: Feedback badge */
         .feedback-badge {
             display: inline-block;
             background: #f59e0b;
@@ -281,6 +308,23 @@
             border-radius: 12px;
             font-size: 0.8em;
             margin-right: 8px;
+        }
+
+        /* NEW: Attachment badge */
+        .attachment-badge {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 8px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .attachment-badge:hover {
+            background: #059669;
         }
 
         .activity-details {
@@ -306,7 +350,6 @@
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
 
-        /* NEW: Feedback report button styling */
         .btn-feedback-report {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             margin-left: 10px;
@@ -399,7 +442,6 @@
             <p>Track your progress, stay motivated, achieve fluency</p>
         </div>
 
-        <!-- NEW: Week Tracker Section -->
         <div id="weekTrackerSection" class="week-tracker hidden">
             <div class="week-info">
                 <div class="week-display">
@@ -502,7 +544,13 @@
                         <textarea id="notes" placeholder="Add any notes about this activity..."></textarea>
                     </div>
 
-                    <!-- NEW: Contains Feedback Checkbox -->
+                    <!-- NEW: File Upload -->
+                    <div class="file-upload-group">
+                        <label for="fileAttachment">📎 Attach File (Optional)</label>
+                        <input type="file" id="fileAttachment" accept=".pdf,.png,.jpg,.jpeg">
+                        <div class="file-info">Accepted formats: PDF, PNG, JPG (max 10MB)</div>
+                    </div>
+
                     <div class="checkbox-group" id="feedbackCheckboxGroup" style="display: none;">
                         <input type="checkbox" id="containsFeedback">
                         <label for="containsFeedback">This activity contains feedback for remedial tutor</label>
@@ -539,7 +587,6 @@
                     <h2>Recent Activities</h2>
                     <div>
                         <button onclick="generateReport()">Generate Report</button>
-                        <!-- NEW: Generate Feedback Report Button -->
                         <button class="btn-feedback-report" onclick="generateFeedbackReport()">Generate Feedback Report</button>
                     </div>
                 </div>
@@ -560,6 +607,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
 
     <script>
         // Firebase configuration
@@ -575,6 +623,7 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const storage = firebase.storage();
 
         let currentUser = null;
 
@@ -617,8 +666,8 @@
                 });
             }
 
-            // NEW: Show feedback checkbox for Speaking, Writing, and Grammar categories
-            if (category === 'Speaking' || category === 'Writing' || category === 'Grammar') {
+            // UPDATED: Show feedback checkbox for Speaking, Writing, Grammar, AND Testing
+            if (category === 'Speaking' || category === 'Writing' || category === 'Grammar' || category === 'Testing') {
                 feedbackCheckbox.style.display = 'flex';
             } else {
                 feedbackCheckbox.style.display = 'none';
@@ -626,10 +675,8 @@
             }
         });
 
-        // Set today's date as default
         document.getElementById('date').valueAsDate = new Date();
 
-        // Authentication
         auth.onAuthStateChanged((user) => {
             if (user) {
                 currentUser = user;
@@ -662,7 +709,7 @@
             });
         }
 
-        // NEW: Week Tracking Functions
+        // Week Tracking Functions
         async function loadWeekTracking() {
             if (!currentUser) return;
 
@@ -678,7 +725,6 @@
                     updateWeekDisplay(data.week, data.month);
                     checkWeekAdvancement(data.lastUpdated);
                 } else {
-                    // Initialize week tracking
                     await db.collection('users')
                         .doc(currentUser.uid)
                         .collection('weekTracking')
@@ -699,7 +745,6 @@
             document.getElementById('currentWeekDisplay').textContent = week;
             document.getElementById('currentMonthDisplay').textContent = month;
 
-            // Update progress dots
             for (let i = 1; i <= 4; i++) {
                 const dot = document.getElementById(`dot${i}`);
                 if (i <= week) {
@@ -709,7 +754,6 @@
                 }
             }
 
-            // Show/hide new month button
             const newMonthBtn = document.getElementById('newMonthBtn');
             if (week === 4) {
                 newMonthBtn.style.display = 'block';
@@ -723,7 +767,6 @@
             const today = new Date();
             const daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
 
-            // Suggest advancing if it's been 7+ days
             if (daysDiff >= 7) {
                 if (confirm('It\'s been a week since your last update. Would you like to advance to the next week?')) {
                     await advanceWeek();
@@ -788,7 +831,7 @@
             }
         }
 
-        // Add activity
+        // NEW: Add activity with file upload
         async function addActivity(event) {
             event.preventDefault();
 
@@ -800,8 +843,29 @@
             const date = document.getElementById('date').value;
             const notes = document.getElementById('notes').value;
             const containsFeedback = document.getElementById('containsFeedback').checked;
+            const fileInput = document.getElementById('fileAttachment');
+            const file = fileInput.files[0];
 
             try {
+                let fileUrl = null;
+                let fileName = null;
+
+                // Upload file if present
+                if (file) {
+                    // Check file size (max 10MB)
+                    if (file.size > 10 * 1024 * 1024) {
+                        alert('File is too large. Maximum size is 10MB.');
+                        return;
+                    }
+
+                    const storageRef = storage.ref();
+                    const fileRef = storageRef.child(`users/${currentUser.uid}/attachments/${Date.now()}_${file.name}`);
+                    
+                    await fileRef.put(file);
+                    fileUrl = await fileRef.getDownloadURL();
+                    fileName = file.name;
+                }
+
                 await db.collection('users')
                     .doc(currentUser.uid)
                     .collection('activities')
@@ -812,6 +876,8 @@
                         date: date,
                         notes: notes,
                         containsFeedback: containsFeedback,
+                        fileUrl: fileUrl,
+                        fileName: fileName,
                         timestamp: firebase.firestore.FieldValue.serverTimestamp()
                     });
 
@@ -864,12 +930,18 @@
                             feedbackBadge = '<span class="feedback-badge">📝 Feedback</span>';
                         }
 
+                        let attachmentBadge = '';
+                        if (activity.fileUrl) {
+                            attachmentBadge = `<a href="${activity.fileUrl}" target="_blank" class="attachment-badge">📎 ${activity.fileName || 'Attachment'}</a>`;
+                        }
+
                         activityDiv.innerHTML = `
                             <div class="activity-info">
                                 <div class="activity-type">${activity.type}</div>
                                 <div>
                                     <span class="activity-category">${activity.category}</span>
                                     ${feedbackBadge}
+                                    ${attachmentBadge}
                                 </div>
                                 <div class="activity-details">
                                     ${activity.date} • ${activity.duration} minutes
@@ -926,7 +998,6 @@
                         }
                     });
 
-                    // Calculate streak
                     const sortedDates = Array.from(dates).sort().reverse();
                     let streak = 0;
                     let checkDate = new Date();
@@ -975,7 +1046,6 @@
                 });
         }
 
-        // Delete activity
         async function deleteActivity(activityId, activityDate) {
             if (!confirm('Are you sure you want to delete this activity?')) {
                 return;
@@ -996,7 +1066,6 @@
             }
         }
 
-        // FIXED: Edit activity - now properly edits instead of deleting
         async function editActivity(activityId) {
             try {
                 const doc = await db.collection('users')
@@ -1008,10 +1077,8 @@
                 if (doc.exists) {
                     const activity = doc.data();
                     
-                    // Populate the form with the activity data
                     document.getElementById('category').value = activity.category;
                     
-                    // Trigger change event to populate activity types
                     const event = new Event('change');
                     document.getElementById('category').dispatchEvent(event);
                     
@@ -1023,7 +1090,6 @@
                         document.getElementById('containsFeedback').checked = activity.containsFeedback || false;
                     }, 100);
 
-                    // Delete the old entry so when they submit it creates a new one
                     await db.collection('users')
                         .doc(currentUser.uid)
                         .collection('activities')
@@ -1033,7 +1099,6 @@
                     loadActivities();
                     updateStats();
                     
-                    // Scroll to the top so they can see the form
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             } catch (error) {
@@ -1042,13 +1107,12 @@
             }
         }
 
-        // Clear date filter
         function clearFilter() {
             document.getElementById('filterDate').value = '';
             loadActivities();
         }
 
-        // Generate report for AI analysis (EXISTING FUNCTION - PRESERVED)
+        // UPDATED: Generate report with Testing activities grouped by subcategory
         function generateReport() {
             if (!currentUser) return;
 
@@ -1065,19 +1129,35 @@
                     
                     querySnapshot.forEach((doc) => {
                         const activity = doc.data();
-                        const category = activity.category;
                         
-                        if (!categories[category]) {
-                            categories[category] = {
+                        // MODIFIED: Group Testing activities by their subcategory
+                        let categoryKey = activity.category;
+                        
+                        if (activity.category === 'Testing') {
+                            if (activity.type === 'Monthly Remedial Exam') {
+                                categoryKey = 'Grammar';
+                            } else if (activity.type === 'Reading') {
+                                categoryKey = 'Reading';
+                            } else if (activity.type === 'Writing') {
+                                categoryKey = 'Writing';
+                            } else if (activity.type === 'Speaking') {
+                                categoryKey = 'Speaking';
+                            } else if (activity.type === 'Listening') {
+                                categoryKey = 'Listening';
+                            }
+                        }
+                        
+                        if (!categories[categoryKey]) {
+                            categories[categoryKey] = {
                                 count: 0,
                                 time: 0,
                                 activities: []
                             };
                         }
                         
-                        categories[category].count++;
-                        categories[category].time += activity.duration;
-                        categories[category].activities.push(activity);
+                        categories[categoryKey].count++;
+                        categories[categoryKey].time += activity.duration;
+                        categories[categoryKey].activities.push(activity);
                         totalTime += activity.duration;
                     });
 
@@ -1112,6 +1192,9 @@
                         if (activity.notes) {
                             report += `  Notes: ${activity.notes}\n`;
                         }
+                        if (activity.fileUrl) {
+                            report += `  Attachment: ${activity.fileName || 'File attached'}\n`;
+                        }
                         recentCount++;
                     });
 
@@ -1129,12 +1212,11 @@
                 });
         }
 
-        // NEW: Generate Feedback Report for Remedial Tutor
+        // Generate Feedback Report for Remedial Tutor (UNCHANGED)
         async function generateFeedbackReport() {
             if (!currentUser) return;
 
             try {
-                // Get current week tracking info
                 const weekDoc = await db.collection('users')
                     .doc(currentUser.uid)
                     .collection('weekTracking')
@@ -1149,14 +1231,12 @@
                 const weekData = weekDoc.data();
                 const currentWeek = weekData.week;
 
-                // Calculate date range for current week
                 const now = new Date();
                 const weekStart = new Date(now);
                 weekStart.setDate(weekStart.getDate() - 7);
                 const weekStartStr = weekStart.toISOString().split('T')[0];
                 const todayStr = now.toISOString().split('T')[0];
 
-                // Get all activities from the current week
                 const activitiesSnapshot = await db.collection('users')
                     .doc(currentUser.uid)
                     .collection('activities')
@@ -1167,7 +1247,6 @@
 
                 let report = `=== WEEK ${currentWeek} OF 4 - ${weekStartStr} to ${todayStr} ===\n\n`;
 
-                // Collect feedback activities by category
                 const speakingFeedback = [];
                 const writingFeedback = [];
                 const zoomFeedback = [];
@@ -1176,7 +1255,6 @@
                 activitiesSnapshot.forEach((doc) => {
                     const activity = doc.data();
                     
-                    // Check if it's a daily remedial exercise (auto-included)
                     if (activity.type && activity.type.startsWith('Daily Remedial Exercise - Day')) {
                         const dayMatch = activity.type.match(/Day (\d+)/);
                         if (dayMatch) {
@@ -1187,16 +1265,16 @@
                             dailyAssignments[dayNum].push(activity);
                         }
                     }
-                    // Check if it's a monthly exam (auto-included)
                     else if (activity.type === 'Monthly Remedial Exam') {
                         report += `[END OF MONTH EXAM]\n${activity.notes || 'No answers provided'}\n\n`;
                     }
-                    // Check if it's flagged feedback
                     else if (activity.containsFeedback) {
                         const entry = {
                             date: activity.date,
                             type: activity.type,
-                            notes: activity.notes || 'No notes provided'
+                            notes: activity.notes || 'No notes provided',
+                            fileUrl: activity.fileUrl,
+                            fileName: activity.fileName
                         };
 
                         if (activity.category === 'Speaking') {
@@ -1207,29 +1285,36 @@
                     }
                 });
 
-                // Add speaking feedback
                 speakingFeedback.forEach(item => {
                     report += `[SPEAKING - AI SCENARIO - ${item.date}]\n`;
-                    report += `${item.notes}\n\n`;
+                    report += `${item.notes}\n`;
+                    if (item.fileUrl) {
+                        report += `Attachment: ${item.fileName || 'File attached'} - ${item.fileUrl}\n`;
+                    }
+                    report += '\n';
                 });
 
-                // Add writing feedback
                 writingFeedback.forEach(item => {
                     report += `[WRITING PRACTICE - ${item.date}]\n`;
-                    report += `${item.notes}\n\n`;
+                    report += `${item.notes}\n`;
+                    if (item.fileUrl) {
+                        report += `Attachment: ${item.fileName || 'File attached'} - ${item.fileUrl}\n`;
+                    }
+                    report += '\n';
                 });
 
-                // Add zoom feedback (if any)
                 zoomFeedback.forEach(item => {
                     report += `[ZOOM LESSON - ${item.date}]\n`;
-                    report += `${item.notes}\n\n`;
+                    report += `${item.notes}\n`;
+                    if (item.fileUrl) {
+                        report += `Attachment: ${item.fileName || 'File attached'} - ${item.fileUrl}\n`;
+                    }
+                    report += '\n';
                 });
 
-                // Add daily assignments from PREVIOUS week if we're past week 1
                 if (currentWeek > 1) {
                     report += `[DAILY ASSIGNMENTS - WEEK ${currentWeek - 1}]\n`;
                     
-                    // Get previous week's date range
                     const prevWeekStart = new Date(weekStart);
                     prevWeekStart.setDate(prevWeekStart.getDate() - 7);
                     const prevWeekEnd = new Date(weekStart);
@@ -1283,7 +1368,6 @@
                     return;
                 }
 
-                // Copy to clipboard
                 navigator.clipboard.writeText(report).then(() => {
                     alert('Feedback report copied to clipboard! You can now paste it into your Power Up, Push Forward - Remedial Tutor conversation.');
                 }).catch(err => {

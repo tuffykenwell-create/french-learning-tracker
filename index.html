@@ -44,6 +44,76 @@
             opacity: 0.9;
         }
 
+        /* NEW: Week Tracker Styles */
+        .week-tracker {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .week-info {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .week-display {
+            text-align: center;
+        }
+
+        .week-display .label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-bottom: 3px;
+        }
+
+        .week-display .number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .week-progress {
+            display: flex;
+            gap: 8px;
+        }
+
+        .week-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+        }
+
+        .week-dot.active {
+            background: white;
+            box-shadow: 0 0 10px rgba(255,255,255,0.8);
+        }
+
+        .week-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-week {
+            background: white;
+            color: #4facfe;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-week:hover {
+            transform: translateY(-2px);
+        }
+
         .auth-section {
             padding: 30px;
             text-align: center;
@@ -101,6 +171,24 @@
             margin-bottom: 5px;
             color: #555;
             font-weight: 500;
+        }
+
+        /* NEW: Checkbox styling */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin-bottom: 0;
+            cursor: pointer;
         }
 
         input, select, textarea {
@@ -184,6 +272,17 @@
             margin-right: 8px;
         }
 
+        /* NEW: Feedback badge */
+        .feedback-badge {
+            display: inline-block;
+            background: #f59e0b;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 8px;
+        }
+
         .activity-details {
             color: #666;
             font-size: 0.9em;
@@ -205,6 +304,12 @@
 
         .btn-edit {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        /* NEW: Feedback report button styling */
+        .btn-feedback-report {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            margin-left: 10px;
         }
 
         .filter-section {
@@ -232,66 +337,58 @@
             border-left: 4px solid #f59e0b;
             padding: 15px 20px;
             border-radius: 8px;
-            margin-top: 20px;
-            display: none;
+            margin-bottom: 30px;
         }
-        
-        .focus-reminder-title {
-            font-weight: 600;
+
+        .focus-reminder h3 {
             color: #92400e;
+            margin-bottom: 8px;
+        }
+
+        .focus-reminder p {
+            color: #78350f;
+            margin: 0;
+        }
+
+        .summary-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .summary-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .summary-item .label {
+            font-size: 0.85em;
+            color: #666;
             margin-bottom: 5px;
         }
-        
-        .focus-reminder-text {
-            color: #78350f;
+
+        .summary-item .value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
         }
 
-        .btn-focus {
-            background: #f59e0b;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 1em;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .btn-focus:hover {
-            background: #d97706;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4);
-        }
-
-        .no-activities {
-            text-align: center;
-            color: #999;
-            padding: 40px;
-            font-style: italic;
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 1.8em;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .activity-item {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .activity-actions {
-                margin-top: 10px;
-                width: 100%;
-            }
-
-            .activity-actions button {
-                flex: 1;
-            }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
@@ -299,27 +396,40 @@
     <div class="container">
         <div class="header">
             <h1>🇫🇷 French Learning Tracker</h1>
-            <p>Track your journey to fluency</p>
+            <p>Track your progress, stay motivated, achieve fluency</p>
+        </div>
+
+        <!-- NEW: Week Tracker Section -->
+        <div id="weekTrackerSection" class="week-tracker hidden">
+            <div class="week-info">
+                <div class="week-display">
+                    <div class="label">Current Week</div>
+                    <div class="number" id="currentWeekDisplay">1</div>
+                </div>
+                <div class="week-display">
+                    <div class="label">Month</div>
+                    <div class="number" id="currentMonthDisplay">1</div>
+                </div>
+                <div class="week-progress">
+                    <div class="week-dot active" id="dot1"></div>
+                    <div class="week-dot" id="dot2"></div>
+                    <div class="week-dot" id="dot3"></div>
+                    <div class="week-dot" id="dot4"></div>
+                </div>
+            </div>
+            <div class="week-actions">
+                <button class="btn-week" onclick="advanceWeek()">Next Week</button>
+                <button class="btn-week" onclick="startNewMonth()" id="newMonthBtn" style="display: none;">Start New Month</button>
+            </div>
         </div>
 
         <div id="authSection" class="auth-section">
-            <p>Sign in with Google to sync your learning progress across devices and add events to your calendar!</p>
-            <div id="g_id_onload"
-                 data-client_id="1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com"
-                 data-callback="handleCredentialResponse"
-                 data-auto_prompt="false">
-            </div>
-            <div class="g_id_signin"
-                 data-type="standard"
-                 data-size="large"
-                 data-theme="outline"
-                 data-text="sign_in_with"
-                 data-shape="rectangular"
-                 data-logo_alignment="left">
-            </div>
+            <h2>Welcome! Please sign in to continue</h2>
+            <p style="margin: 20px 0;">Sign in with your Google account to start tracking your French learning journey.</p>
+            <button onclick="signIn()">Sign In with Google</button>
         </div>
 
-        <div id="mainContent" class="content" style="display: none;">
+        <div id="appContent" class="content hidden">
             <div class="stats-grid">
                 <div class="stat-card">
                     <h3>Total Time</h3>
@@ -339,7 +449,7 @@
                 <div class="stat-card">
                     <h3>Activities</h3>
                     <div class="number" id="activityCount">0</div>
-                    <p>sessions</p>
+                    <p>total</p>
                 </div>
                 <div class="stat-card">
                     <h3>Streak</h3>
@@ -348,27 +458,32 @@
                 </div>
             </div>
 
+            <div class="focus-reminder">
+                <h3>🎯 Your French Learning Focus</h3>
+                <p>Consistency is key! Try to practice a little bit every day, even if it's just 10 minutes.</p>
+            </div>
+
             <div class="input-section">
                 <h2>Log New Activity</h2>
-                <form id="activityForm">
+                <form id="activityForm" onsubmit="addActivity(event)">
                     <div class="form-group">
                         <label for="category">Category</label>
                         <select id="category" required>
-                            <option value="">Select a category...</option>
-                            <option value="Reading">📖 Reading</option>
-                            <option value="Writing">✍️ Writing</option>
-                            <option value="Listening">👂 Listening</option>
-                            <option value="Speaking">🗣️ Speaking</option>
-                            <option value="Grammar">📚 Grammar</option>
-                            <option value="Vocabulary">💭 Vocabulary</option>
-                            <option value="Testing">📝 Testing</option>
+                            <option value="">Select a category</option>
+                            <option value="Speaking">Speaking</option>
+                            <option value="Listening">Listening</option>
+                            <option value="Reading">Reading</option>
+                            <option value="Writing">Writing</option>
+                            <option value="Grammar">Grammar</option>
+                            <option value="Vocabulary">Vocabulary</option>
+                            <option value="Testing">Testing</option>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label for="activityType">Activity Type</label>
                         <select id="activityType" required>
-                            <option value="">Select a category first...</option>
+                            <option value="">Select activity type</option>
                         </select>
                     </div>
 
@@ -384,259 +499,326 @@
 
                     <div class="form-group">
                         <label for="notes">Notes (optional)</label>
-                        <textarea id="notes" placeholder="What did you learn or practice?"></textarea>
+                        <textarea id="notes" placeholder="Add any notes about this activity..."></textarea>
+                    </div>
+
+                    <!-- NEW: Contains Feedback Checkbox -->
+                    <div class="checkbox-group" id="feedbackCheckboxGroup" style="display: none;">
+                        <input type="checkbox" id="containsFeedback">
+                        <label for="containsFeedback">This activity contains feedback for remedial tutor</label>
                     </div>
 
                     <button type="submit">Add Activity</button>
                 </form>
             </div>
 
+            <div class="summary-section">
+                <h2>📊 Quick Summary</h2>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="label">Total Activities</div>
+                        <div class="value" id="summaryTotal">0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Total Minutes</div>
+                        <div class="value" id="summaryTime">0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Average Duration</div>
+                        <div class="value" id="summaryAverage">0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Most Common</div>
+                        <div class="value" id="summaryMostCommon" style="font-size: 0.9em;">-</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="activities-list">
-                <h2>Recent Activities</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Recent Activities</h2>
+                    <div>
+                        <button onclick="generateReport()">Generate Report</button>
+                        <!-- NEW: Generate Feedback Report Button -->
+                        <button class="btn-feedback-report" onclick="generateFeedbackReport()">Generate Feedback Report</button>
+                    </div>
+                </div>
+
                 <div class="filter-section">
                     <label for="filterDate">Filter by date:</label>
-                    <input type="date" id="filterDate">
+                    <input type="date" id="filterDate" onchange="loadActivities()">
                     <button onclick="clearFilter()">Clear Filter</button>
                 </div>
+
                 <div id="activitiesList"></div>
             </div>
 
-            <div class="input-section" style="margin-top: 30px;">
-                <h2>Summary & Analysis</h2>
-                <div id="summaryContent" style="margin-bottom: 20px;">
-                    <p><strong>Total Activities:</strong> <span id="summaryTotal">0</span></p>
-                    <p><strong>Total Time:</strong> <span id="summaryTime">0</span> minutes</p>
-                    <p><strong>Average per session:</strong> <span id="summaryAverage">0</span> minutes</p>
-                    <p><strong>Most common activity:</strong> <span id="summaryMostCommon">-</span></p>
-                </div>
-                <button onclick="generateReport()">Generate Report for AI Analysis</button>
-            </div>
-
-            <div style="text-align: center; margin-top: 20px;">
-                <button class="sign-out-btn" onclick="signOut()">Sign Out</button>
-            </div>
+            <button class="sign-out-btn" onclick="signOut()">Sign Out</button>
         </div>
     </div>
 
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    
-    <!-- Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    
-    <!-- Google API Client (for Calendar) -->
-    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
     <script>
         // Firebase configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyAoN9yI6dLRymNhZWhdAr_QX1Xz3fU9N1c",
-            authDomain: "french-learning-tracker.firebaseapp.com",
-            projectId: "french-learning-tracker",
-            storageBucket: "french-learning-tracker.firebasestorage.app",
-            messagingSenderId: "268021913318",
-            appId: "1:268021913318:web:7fffc6c1c6856caf36e9a7"
+            apiKey: "AIzaSyC0bswJtXOZf5j0wVAv_6-NeUNmXMgYwu4",
+            authDomain: "french-tracker-16feb.firebaseapp.com",
+            projectId: "french-tracker-16feb",
+            storageBucket: "french-tracker-16feb.firebasestorage.app",
+            messagingSenderId: "691692261654",
+            appId: "1:691692261654:web:f2ee0ca37f867f2e65f577"
         };
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
 
         let currentUser = null;
-        let accessToken = null;
-        let calendarId = null;
-        let calendarInitialized = false;
-        let tokenClient = null;
 
-        // Calendar API configuration
-        const CLIENT_ID = '1019366079-9kataacgrh0ldgkqo9853n4kb0vil481.apps.googleusercontent.com';
-        const API_KEY = 'AIzaSyAoN9yI6dLRymNhZWhdAr_QX1Xz3fU9N1c';
-        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-        const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
-
-        // Activity types organized by category
+        // Activity types for each category
         const activityTypes = {
-            'Reading': [
-                'Book Reading',
-                'Article Reading',
-                'News Reading',
-                'Comic/Manga',
-                'Online Content'
-            ],
-            'Writing': [
-                'Writing Practice',
-                'Translation',
-                'AI Chat',
-                'Journaling',
-                'Essay/Story Writing'
-            ],
-            'Listening': [
-                'Audiobook',
-                'Podcast',
-                'Video',
-                'Music',
-                'Radio'
-            ],
-            'Speaking': [
-                'Conversation Practice',
-                'Shadowing',
-                'Read Aloud',
-                'Zoom Class',
-                'Lingoda Class',
-                'Babbel Live',
-                'Recording Practice'
-            ],
-            'Grammar': [
+            Speaking: ['Conversation Practice', 'Shadowing', 'Read Aloud', 'AI Chat', 'Other'],
+            Listening: ['Podcast', 'Audiobook', 'Video', 'Music', 'Other'],
+            Reading: ['Book Reading', 'Article', 'News', 'Other'],
+            Writing: ['Writing Practice', 'Journal', 'Email', 'AI Chat', 'Other'],
+            Grammar: [
                 'Grammar Exercise',
-                'Sentence Diagramming',
-                'Conjugation Practice',
-                'Grammar Book Study'
+                'AI Chat',
+                'Daily Remedial Exercise - Day 1',
+                'Daily Remedial Exercise - Day 2',
+                'Daily Remedial Exercise - Day 3',
+                'Daily Remedial Exercise - Day 4',
+                'Daily Remedial Exercise - Day 5',
+                'Daily Remedial Exercise - Day 6',
+                'Daily Remedial Exercise - Day 7',
+                'Other'
             ],
-            'Vocabulary': [
-                'Duolingo',
-                'Vocabulary Practice',
-                'Flashcards',
-                'Word Lists',
-                'Anki'
-            ],
-            'Testing': [
-                'Reading',
-                'Writing',
-                'Listening',
-                'Speaking',
-                'Grammar',
-                'Vocabulary'
-            ]
+            Vocabulary: ['Flashcards', 'Word Lists', 'AI Chat', 'Other'],
+            Testing: ['Reading', 'Writing', 'Speaking', 'Listening', 'Monthly Remedial Exam', 'Other']
         };
 
         // Update activity type dropdown when category changes
         document.getElementById('category').addEventListener('change', function() {
             const category = this.value;
-            const activityTypeSelect = document.getElementById('activityType');
+            const typeSelect = document.getElementById('activityType');
+            const feedbackCheckbox = document.getElementById('feedbackCheckboxGroup');
             
-            if (!category) {
-                activityTypeSelect.innerHTML = '<option value="">Select a category first...</option>';
-                activityTypeSelect.disabled = true;
-                return;
-            }
+            typeSelect.innerHTML = '<option value="">Select activity type</option>';
             
-            activityTypeSelect.disabled = false;
-            activityTypeSelect.innerHTML = '<option value="">Select an activity...</option>';
-            
-            if (activityTypes[category]) {
+            if (category && activityTypes[category]) {
                 activityTypes[category].forEach(type => {
                     const option = document.createElement('option');
                     option.value = type;
                     option.textContent = type;
-                    activityTypeSelect.appendChild(option);
+                    typeSelect.appendChild(option);
                 });
             }
-            
-            // Add "Other" option
-            const otherOption = document.createElement('option');
-            otherOption.value = 'Other';
-            otherOption.textContent = 'Other';
-            activityTypeSelect.appendChild(otherOption);
-        });
 
-        // Handle Google Sign-In
-        function handleCredentialResponse(response) {
-            const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
-            
-            auth.signInWithCredential(credential)
-                .then((result) => {
-                    currentUser = result.user;
-                    console.log('Signed in:', currentUser.email);
-                    showMainContent();
-                })
-                .catch((error) => {
-                    console.error('Error signing in:', error);
-                    alert('Error signing in: ' + error.message);
-                });
-        }
-
-        // Initialize Google Calendar API with new token client
-        // Update calendar event for a specific date (disabled)
-        async function updateCalendarEvent(date) {
-            // Calendar integration disabled - function does nothing
-            return;
-        }
-
-        // Show main content and hide auth section
-        function showMainContent() {
-            document.getElementById('authSection').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-            
-            setTimeout(() => {
-                loadActivities();
-                updateStats();
-            }, 100);
-        }
-
-        // Sign out
-        function signOut() {
-            auth.signOut().then(() => {
-                currentUser = null;
-                accessToken = null;
-                calendarId = null;
-                document.getElementById('authSection').style.display = 'block';
-                document.getElementById('mainContent').style.display = 'none';
-                if (google.accounts.id) {
-                    google.accounts.id.disableAutoSelect();
-                }
-            });
-        }
-
-        // Check auth state on page load
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                currentUser = user;
-                showMainContent();
+            // NEW: Show feedback checkbox for Speaking, Writing, and Grammar categories
+            if (category === 'Speaking' || category === 'Writing' || category === 'Grammar') {
+                feedbackCheckbox.style.display = 'flex';
+            } else {
+                feedbackCheckbox.style.display = 'none';
+                document.getElementById('containsFeedback').checked = false;
             }
         });
 
         // Set today's date as default
-        document.addEventListener('DOMContentLoaded', function() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('date').value = today;
+        document.getElementById('date').valueAsDate = new Date();
+
+        // Authentication
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('appContent').classList.remove('hidden');
+                document.getElementById('weekTrackerSection').classList.remove('hidden');
+                loadActivities();
+                updateStats();
+                loadWeekTracking();
+            } else {
+                currentUser = null;
+                document.getElementById('authSection').classList.remove('hidden');
+                document.getElementById('appContent').classList.add('hidden');
+                document.getElementById('weekTrackerSection').classList.add('hidden');
+            }
         });
 
-        // Handle form submission
-        document.getElementById('activityForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        function signIn() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch((error) => {
+                console.error('Error signing in:', error);
+                alert('Error signing in: ' + error.message);
+            });
+        }
 
-            if (!currentUser) {
-                alert('Please sign in first!');
+        function signOut() {
+            auth.signOut().catch((error) => {
+                console.error('Error signing out:', error);
+                alert('Error signing out: ' + error.message);
+            });
+        }
+
+        // NEW: Week Tracking Functions
+        async function loadWeekTracking() {
+            if (!currentUser) return;
+
+            try {
+                const doc = await db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('weekTracking')
+                    .doc('current')
+                    .get();
+
+                if (doc.exists) {
+                    const data = doc.data();
+                    updateWeekDisplay(data.week, data.month);
+                    checkWeekAdvancement(data.lastUpdated);
+                } else {
+                    // Initialize week tracking
+                    await db.collection('users')
+                        .doc(currentUser.uid)
+                        .collection('weekTracking')
+                        .doc('current')
+                        .set({
+                            week: 1,
+                            month: 1,
+                            lastUpdated: new Date().toISOString()
+                        });
+                    updateWeekDisplay(1, 1);
+                }
+            } catch (error) {
+                console.error('Error loading week tracking:', error);
+            }
+        }
+
+        function updateWeekDisplay(week, month) {
+            document.getElementById('currentWeekDisplay').textContent = week;
+            document.getElementById('currentMonthDisplay').textContent = month;
+
+            // Update progress dots
+            for (let i = 1; i <= 4; i++) {
+                const dot = document.getElementById(`dot${i}`);
+                if (i <= week) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            }
+
+            // Show/hide new month button
+            const newMonthBtn = document.getElementById('newMonthBtn');
+            if (week === 4) {
+                newMonthBtn.style.display = 'block';
+            } else {
+                newMonthBtn.style.display = 'none';
+            }
+        }
+
+        async function checkWeekAdvancement(lastUpdated) {
+            const lastDate = new Date(lastUpdated);
+            const today = new Date();
+            const daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+
+            // Suggest advancing if it's been 7+ days
+            if (daysDiff >= 7) {
+                if (confirm('It\'s been a week since your last update. Would you like to advance to the next week?')) {
+                    await advanceWeek();
+                }
+            }
+        }
+
+        async function advanceWeek() {
+            if (!currentUser) return;
+
+            try {
+                const docRef = db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('weekTracking')
+                    .doc('current');
+
+                const doc = await docRef.get();
+                const data = doc.data();
+
+                if (data.week < 4) {
+                    await docRef.update({
+                        week: data.week + 1,
+                        lastUpdated: new Date().toISOString()
+                    });
+                    updateWeekDisplay(data.week + 1, data.month);
+                } else {
+                    alert('You\'ve completed all 4 weeks! Please submit your monthly exam and then click "Start New Month".');
+                }
+            } catch (error) {
+                console.error('Error advancing week:', error);
+                alert('Error advancing week: ' + error.message);
+            }
+        }
+
+        async function startNewMonth() {
+            if (!currentUser) return;
+
+            if (!confirm('Have you completed and submitted your monthly exam? Starting a new month will reset to Week 1.')) {
                 return;
             }
 
-            const activity = {
-                category: document.getElementById('category').value,
-                type: document.getElementById('activityType').value,
-                duration: parseInt(document.getElementById('duration').value),
-                date: document.getElementById('date').value,
-                notes: document.getElementById('notes').value,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            };
+            try {
+                const docRef = db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('weekTracking')
+                    .doc('current');
+
+                const doc = await docRef.get();
+                const data = doc.data();
+
+                await docRef.update({
+                    week: 1,
+                    month: data.month + 1,
+                    lastUpdated: new Date().toISOString()
+                });
+
+                updateWeekDisplay(1, data.month + 1);
+                alert('New month started! You\'re now in Week 1 of Month ' + (data.month + 1));
+            } catch (error) {
+                console.error('Error starting new month:', error);
+                alert('Error starting new month: ' + error.message);
+            }
+        }
+
+        // Add activity
+        async function addActivity(event) {
+            event.preventDefault();
+
+            if (!currentUser) return;
+
+            const category = document.getElementById('category').value;
+            const type = document.getElementById('activityType').value;
+            const duration = parseInt(document.getElementById('duration').value);
+            const date = document.getElementById('date').value;
+            const notes = document.getElementById('notes').value;
+            const containsFeedback = document.getElementById('containsFeedback').checked;
 
             try {
                 await db.collection('users')
                     .doc(currentUser.uid)
                     .collection('activities')
-                    .add(activity);
+                    .add({
+                        category: category,
+                        type: type,
+                        duration: duration,
+                        date: date,
+                        notes: notes,
+                        containsFeedback: containsFeedback,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
 
-                await updateCalendarEvent(activity.date);
-
-                this.reset();
-                const today = new Date().toISOString().split('T')[0];
-                document.getElementById('date').value = today;
-                
-                // Reset the activity type dropdown
-                document.getElementById('activityType').innerHTML = '<option value="">Select a category first...</option>';
-                document.getElementById('activityType').disabled = true;
+                document.getElementById('activityForm').reset();
+                document.getElementById('date').valueAsDate = new Date();
+                document.getElementById('containsFeedback').checked = false;
+                document.getElementById('feedbackCheckboxGroup').style.display = 'none';
                 
                 loadActivities();
                 updateStats();
@@ -644,93 +826,64 @@
                 console.error('Error adding activity:', error);
                 alert('Error adding activity: ' + error.message);
             }
-        });
-
-        // Format timestamp to readable format
-        function formatTimestamp(timestamp) {
-            if (!timestamp) return '';
-            
-            let date;
-            if (timestamp.toDate) {
-                // Firestore Timestamp
-                date = timestamp.toDate();
-            } else if (timestamp.seconds) {
-                // Firestore Timestamp object
-                date = new Date(timestamp.seconds * 1000);
-            } else {
-                // Regular date string
-                date = new Date(timestamp);
-            }
-            
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            let hours = date.getHours();
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12; // the hour '0' should be '12'
-            
-            return `${year}-${month}-${day} at ${hours}:${minutes} ${ampm}`;
         }
 
-        // Load and display activities
+        // Load activities
         function loadActivities() {
             if (!currentUser) return;
 
             const filterDate = document.getElementById('filterDate').value;
-
             let query = db.collection('users')
                 .doc(currentUser.uid)
                 .collection('activities')
                 .orderBy('date', 'desc')
-                .limit(50);
+                .orderBy('timestamp', 'desc');
 
-            query.get().then((querySnapshot) => {
-                const activitiesList = document.getElementById('activitiesList');
-                activitiesList.innerHTML = '';
+            if (filterDate) {
+                query = query.where('date', '==', filterDate);
+            }
 
-                let filteredActivities = [];
-                querySnapshot.forEach((doc) => {
-                    const activity = doc.data();
-                    activity.id = doc.id;
-                    
-                    if (!filterDate || activity.date === filterDate) {
-                        filteredActivities.push(activity);
+            query.limit(50)
+                .get()
+                .then((querySnapshot) => {
+                    const activitiesList = document.getElementById('activitiesList');
+                    activitiesList.innerHTML = '';
+
+                    if (querySnapshot.empty) {
+                        activitiesList.innerHTML = '<p style="text-align: center; color: #999;">No activities found. Start by adding your first activity!</p>';
+                        return;
                     }
-                });
 
-                if (filteredActivities.length === 0) {
-                    activitiesList.innerHTML = '<div class="no-activities">No activities found</div>';
-                    return;
-                }
+                    querySnapshot.forEach((doc) => {
+                        const activity = doc.data();
+                        const activityDiv = document.createElement('div');
+                        activityDiv.className = 'activity-item';
+                        
+                        let feedbackBadge = '';
+                        if (activity.containsFeedback) {
+                            feedbackBadge = '<span class="feedback-badge">📝 Feedback</span>';
+                        }
 
-                filteredActivities.forEach((activity) => {
-                    const activityDiv = document.createElement('div');
-                    activityDiv.className = 'activity-item';
-                    
-                    // Format the timestamp for display
-                    const timeDisplay = activity.timestamp ? formatTimestamp(activity.timestamp) : activity.date;
-                    
-                    activityDiv.innerHTML = `
-                        <div class="activity-info">
-                            <div class="activity-type">${activity.type}</div>
-                            <div>
-                                <span class="activity-category">${activity.category}</span>
-                                <span class="activity-details">${activity.duration} min • ${timeDisplay}</span>
+                        activityDiv.innerHTML = `
+                            <div class="activity-info">
+                                <div class="activity-type">${activity.type}</div>
+                                <div>
+                                    <span class="activity-category">${activity.category}</span>
+                                    ${feedbackBadge}
+                                </div>
+                                <div class="activity-details">
+                                    ${activity.date} • ${activity.duration} minutes
+                                    ${activity.notes ? `<br><em>${activity.notes.substring(0, 100)}${activity.notes.length > 100 ? '...' : ''}</em>` : ''}
+                                </div>
                             </div>
-                            ${activity.notes ? `<div class="activity-details" style="margin-top: 5px;">${activity.notes}</div>` : ''}
-                        </div>
-                        <div class="activity-actions">
-                            <button class="btn-edit" onclick="editActivity('${activity.id}')">Edit</button>
-                            <button class="btn-delete" onclick="deleteActivity('${activity.id}', '${activity.date}')">Delete</button>
-                        </div>
-                    `;
-                    activitiesList.appendChild(activityDiv);
+                            <div class="activity-actions">
+                                <button class="btn-edit" onclick="editActivity('${doc.id}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteActivity('${doc.id}', '${activity.date}')">Delete</button>
+                            </div>
+                        `;
+                        activitiesList.appendChild(activityDiv);
+                    });
                 });
-            }).catch((error) => {
-                console.error('Error loading activities:', error);
-            });
         }
 
         // Update statistics
@@ -764,12 +917,10 @@
 
                         const activityDate = new Date(activity.date + 'T00:00:00');
                         
-                        // Calculate daily total (today only)
                         if (activity.date === todayStr) {
                             dailyMinutes += duration;
                         }
                         
-                        // Calculate weekly total
                         if (activityDate >= weekStart) {
                             weekMinutes += duration;
                         }
@@ -800,13 +951,11 @@
                     document.getElementById('activityCount').textContent = activityCount;
                     document.getElementById('streakDays').textContent = streak;
 
-                    // Update summary section
                     document.getElementById('summaryTotal').textContent = activityCount;
                     document.getElementById('summaryTime').textContent = totalMinutes;
                     document.getElementById('summaryAverage').textContent = activityCount > 0 ? 
                         Math.round(totalMinutes / activityCount) : 0;
 
-                    // Find most common activity
                     const activityCounts = {};
                     querySnapshot.forEach((doc) => {
                         const activity = doc.data();
@@ -839,8 +988,6 @@
                     .doc(activityId)
                     .delete();
 
-                await updateCalendarEvent(activityDate);
-
                 loadActivities();
                 updateStats();
             } catch (error) {
@@ -849,7 +996,7 @@
             }
         }
 
-        // Edit activity (simplified - just deletes and lets user re-add)
+        // FIXED: Edit activity - now properly edits instead of deleting
         async function editActivity(activityId) {
             try {
                 const doc = await db.collection('users')
@@ -861,6 +1008,7 @@
                 if (doc.exists) {
                     const activity = doc.data();
                     
+                    // Populate the form with the activity data
                     document.getElementById('category').value = activity.category;
                     
                     // Trigger change event to populate activity types
@@ -872,10 +1020,20 @@
                         document.getElementById('duration').value = activity.duration;
                         document.getElementById('date').value = activity.date;
                         document.getElementById('notes').value = activity.notes || '';
+                        document.getElementById('containsFeedback').checked = activity.containsFeedback || false;
                     }, 100);
 
-                    await deleteActivity(activityId, activity.date);
+                    // Delete the old entry so when they submit it creates a new one
+                    await db.collection('users')
+                        .doc(currentUser.uid)
+                        .collection('activities')
+                        .doc(activityId)
+                        .delete();
                     
+                    loadActivities();
+                    updateStats();
+                    
+                    // Scroll to the top so they can see the form
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             } catch (error) {
@@ -890,7 +1048,7 @@
             loadActivities();
         }
 
-        // Generate report for AI analysis
+        // Generate report for AI analysis (EXISTING FUNCTION - PRESERVED)
         function generateReport() {
             if (!currentUser) return;
 
@@ -957,11 +1115,9 @@
                         recentCount++;
                     });
 
-                    // Copy to clipboard
                     navigator.clipboard.writeText(report).then(() => {
                         alert('Report copied to clipboard! You can now paste it into Claude or another AI for analysis.');
                     }).catch(err => {
-                        // Fallback: show in alert
                         const textarea = document.createElement('textarea');
                         textarea.value = report;
                         document.body.appendChild(textarea);
@@ -971,6 +1127,179 @@
                         alert('Report copied to clipboard! You can now paste it into Claude or another AI for analysis.');
                     });
                 });
+        }
+
+        // NEW: Generate Feedback Report for Remedial Tutor
+        async function generateFeedbackReport() {
+            if (!currentUser) return;
+
+            try {
+                // Get current week tracking info
+                const weekDoc = await db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('weekTracking')
+                    .doc('current')
+                    .get();
+
+                if (!weekDoc.exists) {
+                    alert('Week tracking not initialized. Please refresh the page.');
+                    return;
+                }
+
+                const weekData = weekDoc.data();
+                const currentWeek = weekData.week;
+
+                // Calculate date range for current week
+                const now = new Date();
+                const weekStart = new Date(now);
+                weekStart.setDate(weekStart.getDate() - 7);
+                const weekStartStr = weekStart.toISOString().split('T')[0];
+                const todayStr = now.toISOString().split('T')[0];
+
+                // Get all activities from the current week
+                const activitiesSnapshot = await db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('activities')
+                    .where('date', '>=', weekStartStr)
+                    .where('date', '<=', todayStr)
+                    .orderBy('date', 'desc')
+                    .get();
+
+                let report = `=== WEEK ${currentWeek} OF 4 - ${weekStartStr} to ${todayStr} ===\n\n`;
+
+                // Collect feedback activities by category
+                const speakingFeedback = [];
+                const writingFeedback = [];
+                const zoomFeedback = [];
+                const dailyAssignments = {};
+
+                activitiesSnapshot.forEach((doc) => {
+                    const activity = doc.data();
+                    
+                    // Check if it's a daily remedial exercise (auto-included)
+                    if (activity.type && activity.type.startsWith('Daily Remedial Exercise - Day')) {
+                        const dayMatch = activity.type.match(/Day (\d+)/);
+                        if (dayMatch) {
+                            const dayNum = dayMatch[1];
+                            if (!dailyAssignments[dayNum]) {
+                                dailyAssignments[dayNum] = [];
+                            }
+                            dailyAssignments[dayNum].push(activity);
+                        }
+                    }
+                    // Check if it's a monthly exam (auto-included)
+                    else if (activity.type === 'Monthly Remedial Exam') {
+                        report += `[END OF MONTH EXAM]\n${activity.notes || 'No answers provided'}\n\n`;
+                    }
+                    // Check if it's flagged feedback
+                    else if (activity.containsFeedback) {
+                        const entry = {
+                            date: activity.date,
+                            type: activity.type,
+                            notes: activity.notes || 'No notes provided'
+                        };
+
+                        if (activity.category === 'Speaking') {
+                            speakingFeedback.push(entry);
+                        } else if (activity.category === 'Writing') {
+                            writingFeedback.push(entry);
+                        }
+                    }
+                });
+
+                // Add speaking feedback
+                speakingFeedback.forEach(item => {
+                    report += `[SPEAKING - AI SCENARIO - ${item.date}]\n`;
+                    report += `${item.notes}\n\n`;
+                });
+
+                // Add writing feedback
+                writingFeedback.forEach(item => {
+                    report += `[WRITING PRACTICE - ${item.date}]\n`;
+                    report += `${item.notes}\n\n`;
+                });
+
+                // Add zoom feedback (if any)
+                zoomFeedback.forEach(item => {
+                    report += `[ZOOM LESSON - ${item.date}]\n`;
+                    report += `${item.notes}\n\n`;
+                });
+
+                // Add daily assignments from PREVIOUS week if we're past week 1
+                if (currentWeek > 1) {
+                    report += `[DAILY ASSIGNMENTS - WEEK ${currentWeek - 1}]\n`;
+                    
+                    // Get previous week's date range
+                    const prevWeekStart = new Date(weekStart);
+                    prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+                    const prevWeekEnd = new Date(weekStart);
+                    prevWeekEnd.setDate(prevWeekEnd.getDate() - 1);
+                    
+                    const prevWeekStartStr = prevWeekStart.toISOString().split('T')[0];
+                    const prevWeekEndStr = prevWeekEnd.toISOString().split('T')[0];
+
+                    const prevWeekActivities = await db.collection('users')
+                        .doc(currentUser.uid)
+                        .collection('activities')
+                        .where('date', '>=', prevWeekStartStr)
+                        .where('date', '<=', prevWeekEndStr)
+                        .orderBy('date', 'asc')
+                        .get();
+
+                    const prevDailyAssignments = {};
+                    prevWeekActivities.forEach((doc) => {
+                        const activity = doc.data();
+                        if (activity.type && activity.type.startsWith('Daily Remedial Exercise - Day')) {
+                            const dayMatch = activity.type.match(/Day (\d+)/);
+                            if (dayMatch) {
+                                const dayNum = dayMatch[1];
+                                if (!prevDailyAssignments[dayNum]) {
+                                    prevDailyAssignments[dayNum] = [];
+                                }
+                                prevDailyAssignments[dayNum].push(activity);
+                            }
+                        }
+                    });
+
+                    for (let day = 1; day <= 7; day++) {
+                        const assignments = prevDailyAssignments[day.toString()];
+                        if (assignments && assignments.length > 0) {
+                            const combined = assignments.map(a => `${a.type} (${a.duration} min)`).join(', ');
+                            const notes = assignments.map(a => a.notes).filter(n => n).join(' | ');
+                            report += `Day ${day}: ${combined}`;
+                            if (notes) {
+                                report += ` - Notes: ${notes}`;
+                            }
+                            report += '\n';
+                        } else {
+                            report += `Day ${day}: No exercises logged\n`;
+                        }
+                    }
+                    report += '\n';
+                }
+
+                if (speakingFeedback.length === 0 && writingFeedback.length === 0 && Object.keys(dailyAssignments).length === 0) {
+                    alert('No feedback activities found for this week. Make sure to:\n\n1. Check "Contains Feedback" when logging activities with tutor feedback\n2. Log your daily remedial exercises under Grammar category\n3. Activities must be from the past 7 days');
+                    return;
+                }
+
+                // Copy to clipboard
+                navigator.clipboard.writeText(report).then(() => {
+                    alert('Feedback report copied to clipboard! You can now paste it into your Power Up, Push Forward - Remedial Tutor conversation.');
+                }).catch(err => {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = report;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    alert('Feedback report copied to clipboard! You can now paste it into your Power Up, Push Forward - Remedial Tutor conversation.');
+                });
+
+            } catch (error) {
+                console.error('Error generating feedback report:', error);
+                alert('Error generating feedback report: ' + error.message);
+            }
         }
     </script>
 </body>

@@ -627,6 +627,17 @@
 
         let currentUser = null;
 
+        // FIXED: Helper function to get current date in Toronto timezone (EST/EDT)
+        function getTodayDateString() {
+            const now = new Date();
+            // Convert to Toronto timezone (UTC-5 or UTC-4 depending on DST)
+            const torontoTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Toronto' }));
+            const year = torontoTime.getFullYear();
+            const month = String(torontoTime.getMonth() + 1).padStart(2, '0');
+            const day = String(torontoTime.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         // Activity types for each category
         const activityTypes = {
             Speaking: ['Conversation Practice', 'Shadowing', 'Read Aloud', 'AI Chat', 'Other'],
@@ -676,7 +687,8 @@
             }
         });
 
-        document.getElementById('date').valueAsDate = new Date();
+        // FIXED: Set today's date using Toronto timezone
+        document.getElementById('date').value = getTodayDateString();
 
         auth.onAuthStateChanged((user) => {
             if (user) {
@@ -883,7 +895,8 @@
                     });
 
                 document.getElementById('activityForm').reset();
-                document.getElementById('date').valueAsDate = new Date();
+                // FIXED: Reset date to today using Toronto timezone
+                document.getElementById('date').value = getTodayDateString();
                 document.getElementById('containsFeedback').checked = false;
                 document.getElementById('feedbackCheckboxGroup').style.display = 'none';
                 
@@ -974,13 +987,10 @@
                     let activityCount = querySnapshot.size;
                     let dates = new Set();
 
-                    const now = new Date();
-                    const year = now.getFullYear();
-                    const month = String(now.getMonth() + 1).padStart(2, '0');
-                    const day = String(now.getDate()).padStart(2, '0');
-                    const todayStr = `${year}-${month}-${day}`;
-                    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    // FIXED: Use Toronto timezone for today's date
+                    const todayStr = getTodayDateString();
                     
+                    const now = new Date();
                     const weekStart = new Date(now);
                     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
                     weekStart.setHours(0, 0, 0, 0);
@@ -993,6 +1003,7 @@
 
                         const activityDate = new Date(activity.date + 'T00:00:00');
                         
+                        // FIXED: Daily calculation using Toronto timezone
                         if (activity.date === todayStr) {
                             dailyMinutes += duration;
                         }
@@ -1216,30 +1227,43 @@
                 });
         }
 
-        // Generate Feedback Report for Remedial Tutor (UNCHANGED)
+        // FIXED: Generate Feedback Report - now works without weekTracking collection
         async function generateFeedbackReport() {
             if (!currentUser) return;
 
             try {
-                const weekDoc = await db.collection('users')
-                    .doc(currentUser.uid)
-                    .collection('weekTracking')
-                    .doc('current')
-                    .get();
-
-                if (!weekDoc.exists) {
-                    alert('Week tracking not initialized. Please refresh the page.');
-                    return;
-                }
-
-                const weekData = weekDoc.data();
-                const currentWeek = weekData.week;
-
+                // Calculate current week based on activity history instead of weekTracking collection
                 const now = new Date();
                 const weekStart = new Date(now);
                 weekStart.setDate(weekStart.getDate() - 7);
                 const weekStartStr = weekStart.toISOString().split('T')[0];
                 const todayStr = now.toISOString().split('T')[0];
+
+                // Get all activities to calculate which week we're in
+                const allActivitiesSnapshot = await db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('activities')
+                    .orderBy('date', 'asc')
+                    .get();
+
+                // Find the earliest activity with daily remedial exercises to determine the start
+                let earliestRemedialDate = null;
+                allActivitiesSnapshot.forEach((doc) => {
+                    const activity = doc.data();
+                    if (activity.type && activity.type.startsWith('Daily Remedial Exercise')) {
+                        if (!earliestRemedialDate || activity.date < earliestRemedialDate) {
+                            earliestRemedialDate = activity.date;
+                        }
+                    }
+                });
+
+                // Calculate current week number (default to 1 if no remedial exercises found)
+                let currentWeek = 1;
+                if (earliestRemedialDate) {
+                    const startDate = new Date(earliestRemedialDate);
+                    const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+                    currentWeek = Math.min(Math.floor(daysSinceStart / 7) + 1, 4);
+                }
 
                 const activitiesSnapshot = await db.collection('users')
                     .doc(currentUser.uid)
